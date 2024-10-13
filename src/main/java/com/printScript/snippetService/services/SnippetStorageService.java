@@ -1,6 +1,6 @@
 package com.printScript.snippetService.services;
 
-
+import com.printScript.snippetService.DTO.IdResponse;
 import com.printScript.snippetService.DTO.SnippetResponse;
 import com.printScript.snippetService.entities.Snippet;
 import com.printScript.snippetService.entities.Test;
@@ -10,7 +10,6 @@ import com.printScript.snippetService.repositories.TestRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -23,14 +22,14 @@ public class SnippetStorageService {
     @Autowired
     private TestRepository testRepository;
 
-    public SnippetError saveSnippet( String code) {
+    public IdResponse saveSnippet( String code) {
         try {
             Snippet snippet = new Snippet();
             snippet.setSnippet(code.getBytes());
             snippetRepository.save(snippet);
-            return null;
+            return new IdResponse(snippet.getId(), null);
         } catch (Exception e) {
-           return new SnippetError(500, "Internal server error");
+            return new IdResponse(null, new SnippetError(500, "Internal server error"));
         }
     }
 
@@ -59,25 +58,25 @@ public class SnippetStorageService {
         return null;
     }
 
-    public SnippetError updateSnippet(String snippetId, String snippet) {
+    public IdResponse updateSnippet(String snippetId, String snippet) {
         try {
             Optional<Snippet> snippetOptional = snippetRepository.findById(snippetId);
             if (snippetOptional.isEmpty()) {
-                return new SnippetError(404, "Snippet not found");
+                return new IdResponse(null, new SnippetError(404, "Snippet not found") );
             }
             Snippet snippetEntity = snippetOptional.get();
             snippetEntity.setSnippet(snippet.getBytes());
             snippetRepository.save(snippetEntity);
             return null;
         } catch (Exception e) {
-            return new SnippetError(500, "Internal server error");
+            return new IdResponse(null, new SnippetError(500, "Internal server error"));
         }
     }
 
-    public SnippetError saveTest(String snippetId, String expectedOutput) {
+    public IdResponse saveTest(String snippetId, String expectedOutput) {
         boolean exists = snippetRepository.existsById(snippetId);
         if (!exists) {
-            return new SnippetError(404, "Snippet not found");
+            return new IdResponse(null, new SnippetError(404, "Snippet not found"));
         }
         Test test = new Test();
         try {
@@ -85,7 +84,7 @@ public class SnippetStorageService {
             testRepository.save(test);
             return null;
         } catch (Exception e) {
-            return new SnippetError(500,  "Internal server error");
+            return new IdResponse(null, new SnippetError(500, "Internal server error"));
         }
 
     }
