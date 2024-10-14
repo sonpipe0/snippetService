@@ -1,6 +1,5 @@
 package com.printScript.snippetService.services;
 
-import io.github.cdimascio.dotenv.Dotenv;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
@@ -12,9 +11,9 @@ public class WebClientService {
     private final String permissionsUrl;
     private final String printScriptUrl;
 
-    public WebClientService(Dotenv dotenv) {
-        this.permissionsUrl = dotenv.get("PERMISSIONS_SERVICE_URL");
-        this.printScriptUrl = dotenv.get("PRINT_SCRIPT_SERVICE_URL");
+    public WebClientService() {
+        this.permissionsUrl = System.getenv("PERMISSIONS_SERVICE_URL");
+        this.printScriptUrl = System.getenv("PRINT_SCRIPT_SERVICE_URL");
         this.webClient = WebClient.builder().build();
     }
 

@@ -13,28 +13,23 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Mono;
 
-import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 
-@Controller("snippetStorage")
+@RestController
 public class SnippetStorageController {
 
     @Autowired
     SnippetStorageService storageService;
 
-
     @Autowired
-    WebClientService webClientService;
+    WebClientService printScriptWebClient;
+    @Autowired
+    WebClientService permissionsWebClient;
 
     @PostMapping("snippet/save")
     public ResponseEntity<Object> saveSnippet(@RequestBody PostFile postFile) {
@@ -45,7 +40,7 @@ public class SnippetStorageController {
         HashMap<String, String> body = new HashMap<>();
         body.put("snippetId", response.id());
         body.put("userId", postFile.userId());
-        Mono<HasPassed> serverResponse = webClientService.permissionsWebClient().post("/snippet/hasAccess/save", body, HasPassed.class );
+        Mono<HasPassed> serverResponse = permissionsWebClient.post("/snippet/load/relationship", body, HasPassed.class );
         HasPassed hasPassed = serverResponse.block();
         assert hasPassed != null;
         if (hasPassed.hasPassed()) {
