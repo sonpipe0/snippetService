@@ -19,6 +19,15 @@ public class Snippet {
     @GeneratedValue(strategy = GenerationType.UUID)
     private String id;
 
+    @Column
+    private String title;
+
+    @Column
+    private String description;
+
+    @Column
+    private String language;
+
     @Lob
     @Column
     private byte[] snippet;
