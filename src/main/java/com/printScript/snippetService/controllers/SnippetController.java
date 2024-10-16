@@ -33,12 +33,18 @@ public class SnippetController {
     }
 
     @PostMapping("/save/file")
-    public ResponseEntity<Object> saveSnippetFile(@RequestParam MultipartFile file , @RequestParam String userId, @RequestHeader("Authorization") String token) {
+    public ResponseEntity<Object> saveSnippetFile(
+            @RequestParam MultipartFile file,
+            @RequestParam String userId,
+            @RequestParam String title,
+            @RequestParam String description,
+            @RequestParam String language,
+            @RequestHeader("Authorization") String token) {
         String contentType = file.getContentType();
         if (contentType == null || (!contentType.equals("text/plain") && !contentType.equals("application/json"))) {
             return new ResponseEntity<>("Unsupported file type", HttpStatusCode.valueOf(415)); // 415 Unsupported Media Type
         }
-        Map<String,Object> body = Map.of("file", file, "userId", userId, "token", token);
+        Map<String,Object> body = Map.of("file", file, "userId", userId, "token", token, "title", title, "description", description, "language", language);
         Response<String> response = snippetService.saveFromMultiPart(body);
         if (response.isError()) {
             return new ResponseEntity<>(response.getError().message(), HttpStatusCode.valueOf(response.getError().code()));

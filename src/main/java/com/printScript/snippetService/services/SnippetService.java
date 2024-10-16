@@ -75,11 +75,17 @@ public class SnippetService {
     public Response<String> saveFromMultiPart(Map<String, Object> body) {
         try {
             MultipartFile file = (MultipartFile) body.get("file");
+            String title = (String) body.get("title");
+            String description = (String) body.get("description");
+            String language = (String) body.get("language");
             String userId = (String) body.get("userId");
             String token = (String) body.get("token");
 
             Snippet snippet = new Snippet();
             snippet.setSnippet(file.getBytes());
+            snippet.setTitle(title);
+            snippet.setDescription(description);
+            snippet.setLanguage(language);
             snippetRepository.save(snippet);
 
 
