@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -25,6 +26,20 @@ public class SnippetController {
         body.put("userId", postFile.userId());
         body.put("token", token);
         Response<String> response = snippetService.saveSnippet(body);
+        if (response.isError()) {
+            return new ResponseEntity<>(response.getError().message(), HttpStatusCode.valueOf(response.getError().code()));
+        }
+        return ResponseEntity.ok(response.getData());
+    }
+
+    @PostMapping("/save/file")
+    public ResponseEntity<Object> saveSnippetFile(@RequestParam MultipartFile file , @RequestParam String userId, @RequestHeader("Authorization") String token) {
+        String contentType = file.getContentType();
+        if (contentType == null || (!contentType.equals("text/plain") && !contentType.equals("application/json"))) {
+            return new ResponseEntity<>("Unsupported file type", HttpStatusCode.valueOf(415)); // 415 Unsupported Media Type
+        }
+        Map<String,Object> body = Map.of("file", file, "userId", userId, "token", token);
+        Response<String> response = snippetService.saveFromMultiPart(body);
         if (response.isError()) {
             return new ResponseEntity<>(response.getError().message(), HttpStatusCode.valueOf(response.getError().code()));
         }

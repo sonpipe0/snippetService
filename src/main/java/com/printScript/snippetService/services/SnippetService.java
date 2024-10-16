@@ -6,10 +6,11 @@ import com.printScript.snippetService.DTO.Response;
 import com.printScript.snippetService.entities.Snippet;
 import com.printScript.snippetService.errorDTO.Error;
 import com.printScript.snippetService.repositories.SnippetRepository;
-import com.printScript.snippetService.response.HasPassed;
+import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.interceptor.TransactionAspectSupport;
+import org.springframework.web.multipart.MultipartFile;
 import reactor.core.publisher.Mono;
 
 import java.util.HashMap;
@@ -65,6 +66,47 @@ public class SnippetService {
                 snippetRepository.save(snippet);
             }
             return Response.withData(snippetId);
+        } catch (Exception e) {
+            return Response.withError(new Error(500, "Internal server error"));
+        }
+    }
+
+    @Transactional
+    public Response<String> saveFromMultiPart(Map<String, Object> body) {
+        try {
+            MultipartFile file = (MultipartFile) body.get("file");
+            String userId = (String) body.get("userId");
+            String token = (String) body.get("token");
+
+            Snippet snippet = new Snippet();
+            snippet.setSnippet(file.getBytes());
+            snippetRepository.save(snippet);
+
+
+            String snippetId = snippet.getId();
+
+            JsonNode response = permissionsWebClient.postObject("/snippets/save/relationship", Map.of("snippetId", snippetId, "userId", userId), httpHeaders -> {
+                httpHeaders.set("Authorization", token);
+                httpHeaders.setContentType(org.springframework.http.MediaType.APPLICATION_JSON);
+            }, error -> {
+                Response<Error> errorResponse = Response.errorFromWebFluxError(error);
+                return Mono.just(jacksonObjectMapper.valueToTree(errorResponse));
+            }).block();
+
+            if(response == null) {
+                Optional<Snippet> savedSnippet = snippetRepository.findById(snippetId);
+                if (savedSnippet.isEmpty()) {
+                    TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
+                    return Response.withError(new Error(500, "Internal server error"));
+                }
+                return Response.withData(snippetId);
+            }
+            if (response.has("error")) {
+                TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
+                return Response.withError(jacksonObjectMapper.treeToValue(response.get("error"), Error.class));
+            }
+            return Response.withData(snippetId);
+
         } catch (Exception e) {
             return Response.withError(new Error(500, "Internal server error"));
         }
