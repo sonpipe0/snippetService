@@ -2,6 +2,7 @@ package com.printScript.snippetService.controllers;
 
 import com.printScript.snippetService.DTO.PostFile;
 import com.printScript.snippetService.DTO.Response;
+import com.printScript.snippetService.DTO.SnippetDetails;
 import com.printScript.snippetService.services.SnippetService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatusCode;
@@ -64,6 +65,18 @@ public class SnippetController {
     @GetMapping("/get")
     public ResponseEntity<Object> getSnippet(@RequestBody Map<String, String> body) {
         Response<String> response = snippetService.getSnippet(body.get("snippetId"));
+        if (response.isError()) {
+            return new ResponseEntity<>(response.getError().message(), HttpStatusCode.valueOf(response.getError().code()));
+        }
+        return ResponseEntity.ok(response.getData());
+    }
+
+    @GetMapping("/details")
+    public ResponseEntity<Object> getSnippetDetails(@RequestBody Map<String, String> body, @RequestHeader("Authorization") String token) {
+        String snippetId = body.get("snippetId");
+        String userId = body.get("userId");
+
+        Response<SnippetDetails> response = snippetService.getSnippetDetails(snippetId, userId, token);
         if (response.isError()) {
             return new ResponseEntity<>(response.getError().message(), HttpStatusCode.valueOf(response.getError().code()));
         }
