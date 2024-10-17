@@ -3,6 +3,7 @@ package com.printScript.snippetService.services;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.printScript.snippetService.DTO.Response;
+import com.printScript.snippetService.DTO.SnippetDetails;
 import com.printScript.snippetService.entities.Snippet;
 import com.printScript.snippetService.errorDTO.Error;
 import com.printScript.snippetService.repositories.SnippetRepository;
@@ -13,6 +14,7 @@ import org.springframework.transaction.interceptor.TransactionAspectSupport;
 import org.springframework.web.multipart.MultipartFile;
 import reactor.core.publisher.Mono;
 
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -99,7 +101,7 @@ public class SnippetService {
                 return Mono.just(jacksonObjectMapper.valueToTree(errorResponse));
             }).block();
 
-            if(response == null) {
+            if (response == null) {
                 Optional<Snippet> savedSnippet = snippetRepository.findById(snippetId);
                 if (savedSnippet.isEmpty()) {
                     TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
@@ -132,6 +134,40 @@ public class SnippetService {
             return Response.withError(error);
         }
     }
+
+    public Response<SnippetDetails> getSnippetDetails(String snippetId, String userId, String token) {
+        try {
+            JsonNode accessResponse = permissionsWebClient.get("/snippets/hasAccess?snippetId=" + snippetId + "&user=" + userId, httpHeaders -> {
+                httpHeaders.set("Authorization", token);
+            }, error -> {
+                Response<Error> errorResponse = Response.errorFromWebFluxError(error);
+                return Mono.just(jacksonObjectMapper.valueToTree(errorResponse));
+            }).block();
+
+            if (accessResponse == null) {
+                return Response.withError(new Error(403, "Access Denied"));
+            }
+            if (accessResponse.has("error")) {
+                return Response.withError(jacksonObjectMapper.treeToValue(accessResponse.get("error"), Error.class));
+            }
+
+            Optional<Snippet> snippetOpt = snippetRepository.findById(snippetId);
+            if (snippetOpt.isEmpty()) {
+                return Response.withError(new Error(404, "Snippet not found"));
+            }
+
+            Snippet snippet = snippetOpt.get();
+
+            SnippetDetails snippetDetails = new SnippetDetails();
+            snippetDetails.setId(snippet.getId());
+            snippetDetails.setContent(new String(snippet.getSnippet(), StandardCharsets.UTF_8));
+
+            return Response.withData(snippetDetails);
+        } catch (Exception e) {
+            return Response.withError(new Error(500, "Internal server error"));
+        }
+    }
+
 
     public Response<String> deleteSnippet(String snippetId) {
         boolean exists = snippetRepository.existsById(snippetId);
