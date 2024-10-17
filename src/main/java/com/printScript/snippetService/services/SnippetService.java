@@ -144,10 +144,7 @@ public class SnippetService {
                 return Mono.just(jacksonObjectMapper.valueToTree(errorResponse));
             }).block();
 
-            if (accessResponse == null) {
-                return Response.withError(new Error(403, "Access Denied"));
-            }
-            if (accessResponse.has("error")) {
+            if (accessResponse!= null && accessResponse.has("error")) {
                 return Response.withError(jacksonObjectMapper.treeToValue(accessResponse.get("error"), Error.class));
             }
 
