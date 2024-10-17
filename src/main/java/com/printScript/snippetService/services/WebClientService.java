@@ -38,8 +38,7 @@ public class WebClientService {
     public  Mono<JsonNode> get(
             String path,
             Consumer<HttpHeaders> headers,
-            Function<WebClientResponseException, Mono<JsonNode>> errorHandler,
-            Class<JsonNode> response
+            Function<WebClientResponseException, Mono<JsonNode>> errorHandler
     ) {
         return webClient.get()
                 .uri(path)
@@ -48,7 +47,7 @@ public class WebClientService {
                 .onStatus(status -> status.is4xxClientError() || status.is5xxServerError(),
                         clientResponse -> clientResponse.createException().flatMap(Mono::error)
                 )
-                .bodyToMono(response)
+                .bodyToMono(JsonNode.class)
                 .onErrorResume(WebClientResponseException.class, errorHandler);
     }
 
