@@ -3,27 +3,19 @@ package com.printScript.snippetService.services;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.printScript.snippetService.DTO.Response;
-import com.printScript.snippetService.DTO.UpdateSnippetDTO;
 import com.printScript.snippetService.entities.Snippet;
 import com.printScript.snippetService.errorDTO.Error;
 import com.printScript.snippetService.repositories.SnippetRepository;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.core.io.ByteArrayResource;
-import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.interceptor.TransactionAspectSupport;
-import org.springframework.util.LinkedMultiValueMap;
-import org.springframework.util.MultiValueMap;
 import org.springframework.web.multipart.MultipartFile;
 import reactor.core.publisher.Mono;
 
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
-
-import static com.printScript.snippetService.utils.Utils.*;
-import static org.springframework.http.MediaType.APPLICATION_JSON;
 
 @Service
 public class SnippetService {
@@ -58,7 +50,7 @@ public class SnippetService {
             Mono<JsonNode> serverResponse = permissionsWebClient
                     .postObject("/snippet/load/relationship", body, httpHeaders -> {
                         httpHeaders.setBearerAuth(token);
-                        httpHeaders.setContentType(APPLICATION_JSON);
+                        httpHeaders.setContentType(org.springframework.http.MediaType.APPLICATION_JSON);
                     }, error -> {
                         Response<Error> errorResponse = Response.errorFromWebFluxError(error);
                         JsonNode errorNode = jacksonObjectMapper.valueToTree(errorResponse);
@@ -96,32 +88,12 @@ public class SnippetService {
             snippet.setLanguage(language);
             snippetRepository.save(snippet);
 
-            MultiValueMap<String, Object> map = new LinkedMultiValueMap<>();
-            map.add("file", new ByteArrayResource(file.getBytes()) {
-                @Override
-                public String getFilename() {
-                    return file.getOriginalFilename();
-                }
-            });
-            map.add("version", "1.1");
-            JsonNode executionResponse = printScriptWebClient.uploadMultipart("/runner/validate",  map, httpHeaders -> {
-                httpHeaders.setContentType(MediaType.MULTIPART_FORM_DATA);
-            }, error -> {
-                Response<Error> errorResponse = Response.errorFromWebFluxError(error);
-                return Mono.just(jacksonObjectMapper.valueToTree(errorResponse));
-            }).block();
 
-            if(executionResponse != null) {
-                if (executionResponse.has("error")) {
-                    TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
-                    return Response.withError(jacksonObjectMapper.treeToValue(executionResponse.get("error"), Error.class));
-                }
-            }
             String snippetId = snippet.getId();
 
             JsonNode response = permissionsWebClient.postObject("/snippets/save/relationship", Map.of("snippetId", snippetId, "userId", userId), httpHeaders -> {
                 httpHeaders.set("Authorization", token);
-                httpHeaders.setContentType(APPLICATION_JSON);
+                httpHeaders.setContentType(org.springframework.http.MediaType.APPLICATION_JSON);
             }, error -> {
                 Response<Error> errorResponse = Response.errorFromWebFluxError(error);
                 return Mono.just(jacksonObjectMapper.valueToTree(errorResponse));
@@ -169,55 +141,5 @@ public class SnippetService {
 
         snippetRepository.deleteById(snippetId);
         return Response.withData(snippetId);
-    }
-
-    public Response<String> updateSnippet(MultipartFile file, UpdateSnippetDTO updateSnippetDTO, String token) {
-        try {
-            String snippetId = updateSnippetDTO.getSnippetId();
-            String title = updateSnippetDTO.getTitle();
-            String description = updateSnippetDTO.getDescription();
-            String language = updateSnippetDTO.getLanguage();
-            String version = updateSnippetDTO.getVersion();
-            String userId = updateSnippetDTO.getUserId();
-
-            Optional<Snippet> snippetOptional = snippetRepository.findById(snippetId);
-            if (snippetOptional.isEmpty()) {
-                return Response.withError(new Error(404, "Snippet not found"));
-            }
-
-            JsonNode permissionsResponse = executePermissionsGet(
-                    permissionsWebClient,
-                    "/snippets/validate/access?snippetId=" + snippetId + "&userId=" + userId,
-                    token,
-                    jacksonObjectMapper
-            );
-
-            if (permissionsResponse.has("error")) {
-                return Response.withError(jacksonObjectMapper.treeToValue(permissionsResponse.get("error"), Error.class));
-            }
-
-            JsonNode printScriptResponse = executePrintScriptPostFile(
-                    printScriptWebClient,
-                    "/runner/validate",
-                    toMultiValueMap(file, version),
-                    jacksonObjectMapper
-            );
-
-            if (printScriptResponse.has("error")) {
-                return Response.withError(jacksonObjectMapper.treeToValue(printScriptResponse.get("error"), Error.class));
-            }
-
-            Snippet snippet = snippetOptional.get();
-            snippet.setSnippet(file.getBytes());
-            snippet.setTitle(title);
-            snippet.setDescription(description);
-            snippet.setLanguage(language);
-            snippet.setVersion(version);
-            snippetRepository.save(snippet);
-
-            return Response.withData("Snippet updated successfully");
-        } catch (Exception e) {
-            return Response.withError(new Error(500, "Internal server error"));
-        }
     }
 }
