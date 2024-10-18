@@ -187,7 +187,7 @@ public class SnippetService {
 
             JsonNode permissionsResponse = executePermissionsGet(
                     permissionsWebClient,
-                    "/snippets/validate/access?snippetId=" + snippetId + "&userId=" + userId,
+                    "/snippets/hasAccess?snippetId=" + snippetId + "&userId=" + userId,
                     token,
                     jacksonObjectMapper
             );
