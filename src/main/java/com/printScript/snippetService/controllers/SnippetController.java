@@ -4,6 +4,7 @@ import static com.printScript.snippetService.utils.Utils.checkMediaType;
 import com.printScript.snippetService.DTO.PostFile;
 import com.printScript.snippetService.DTO.Response;
 import com.printScript.snippetService.DTO.UpdateSnippetDTO;
+import com.printScript.snippetService.DTO.SnippetDetails;
 import com.printScript.snippetService.services.SnippetService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatusCode;
@@ -89,4 +90,16 @@ public class SnippetController {
         return ResponseEntity.ok("Snippet updated successfully");
     }
 
+
+    @GetMapping("/details")
+    public ResponseEntity<Object> getSnippetDetails(@RequestBody Map<String, String> body, @RequestHeader("Authorization") String token) {
+        String snippetId = body.get("snippetId");
+        String userId = body.get("userId");
+
+        Response<SnippetDetails> response = snippetService.getSnippetDetails(snippetId, userId, token);
+        if (response.isError()) {
+            return new ResponseEntity<>(response.getError().message(), HttpStatusCode.valueOf(response.getError().code()));
+        }
+        return ResponseEntity.ok(response.getData());
+    }
 }
