@@ -28,6 +28,9 @@ public class Snippet {
     @Column
     private String language;
 
+    @Column
+    private String version;
+
     @Lob
     @Column
     private byte[] snippet;
