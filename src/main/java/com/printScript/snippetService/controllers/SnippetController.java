@@ -1,7 +1,9 @@
 package com.printScript.snippetService.controllers;
 
+import static com.printScript.snippetService.utils.Utils.checkMediaType;
 import com.printScript.snippetService.DTO.PostFile;
 import com.printScript.snippetService.DTO.Response;
+import com.printScript.snippetService.DTO.UpdateSnippetDTO;
 import com.printScript.snippetService.DTO.SnippetDetails;
 import com.printScript.snippetService.services.SnippetService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -70,6 +72,24 @@ public class SnippetController {
         }
         return ResponseEntity.ok(response.getData());
     }
+
+    @PostMapping("/update/file")
+    public ResponseEntity<Object> updateSnippetFile(
+            @RequestPart MultipartFile file,
+            @RequestPart UpdateSnippetDTO updateSnippetDTO,
+            @RequestHeader("Authorization") String token) {
+        ResponseEntity<Object> mediaTypeCheck = checkMediaType(file.getContentType());
+        if (mediaTypeCheck != null) {
+            return mediaTypeCheck;
+        }
+
+        Response<String> response = snippetService.updateSnippet(file, updateSnippetDTO, token);
+        if (response.isError()) {
+            return new ResponseEntity<>(response.getError().message(), HttpStatusCode.valueOf(response.getError().code()));
+        }
+        return ResponseEntity.ok("Snippet updated successfully");
+    }
+
 
     @GetMapping("/details")
     public ResponseEntity<Object> getSnippetDetails(@RequestBody Map<String, String> body, @RequestHeader("Authorization") String token) {
