@@ -23,4 +23,5 @@ jobs:
 
       - name: Run Script on Azure VM
         run: |
-          ssh -o StrictHostKeyChecking=no sonpipe@${{ secrets.VM_STABLE_IP }} 'bash -s' < ~/micro-infra/update-stable.sh
+          ssh -vvv -o StrictHostKeyChecking=no sonpipe@${{ secrets.VM_STABLE_IP }} 'bash -s' < ./micro-infra/update-stable.sh
+
