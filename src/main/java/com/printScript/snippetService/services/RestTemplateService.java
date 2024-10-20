@@ -1,7 +1,6 @@
 package com.printScript.snippetService.services;
 
 import org.springframework.boot.web.client.RestTemplateBuilder;
-import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
@@ -19,16 +18,12 @@ public class RestTemplateService {
     }
 
     public RestTemplateService permissionsRestTemplate(RestTemplateBuilder restTemplateBuilder) {
-        this.restTemplate = restTemplateBuilder
-                .rootUri(permissionsUrl)
-                .build();
+        this.restTemplate = restTemplateBuilder.rootUri(permissionsUrl).build();
         return this;
     }
 
     public RestTemplateService printScriptRestTemplate(RestTemplateBuilder restTemplateBuilder) {
-        this.restTemplate = restTemplateBuilder
-                .rootUri(printScriptUrl)
-                .build();
+        this.restTemplate = restTemplateBuilder.rootUri(printScriptUrl).build();
         return this;
     }
 
@@ -36,8 +31,3 @@ public class RestTemplateService {
         return restTemplate;
     }
 }
-
-
-
-
-

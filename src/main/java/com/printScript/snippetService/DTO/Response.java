@@ -1,7 +1,6 @@
 package com.printScript.snippetService.DTO;
 
 import com.printScript.snippetService.errorDTO.Error;
-import org.springframework.web.reactive.function.client.WebClientResponseException;
 
 public class Response<T> {
     private T data;
@@ -29,9 +28,5 @@ public class Response<T> {
 
     public boolean isError() {
         return error != null;
-    }
-
-    public static <T> Response<T> errorFromWebFluxError(WebClientResponseException e) {
-        return Response.withError(new Error(e.getStatusCode().value(), e.getResponseBodyAsString()));
     }
 }

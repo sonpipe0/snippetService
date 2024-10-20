@@ -1,10 +1,14 @@
 package com.printScript.snippetService.services;
 
+import static com.printScript.snippetService.utils.Utils.*;
+
 import com.printScript.snippetService.DTO.*;
 import com.printScript.snippetService.entities.Snippet;
 import com.printScript.snippetService.errorDTO.Error;
 import com.printScript.snippetService.repositories.SnippetRepository;
 import jakarta.transaction.Transactional;
+import java.nio.charset.StandardCharsets;
+import java.util.Optional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpEntity;
 import org.springframework.stereotype.Service;
@@ -13,10 +17,6 @@ import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
-import java.nio.charset.StandardCharsets;
-import java.util.Optional;
-
-import static com.printScript.snippetService.utils.Utils.*;
 
 @Service
 public class SnippetService {
@@ -51,18 +51,18 @@ public class SnippetService {
 
         HttpEntity<PermissionsDTO> requestPermissions = createPostPermissionsRequest(userId, snippetId, token);
         try {
-            postRequest(permissionsWebClient, "/snippets/save/relationship", requestPermissions);
+            postRequest(permissionsWebClient, "/snippets/save/relationship", requestPermissions, Void.class);
         } catch (HttpClientErrorException e) {
             TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
-            return Response.withError(new Error(e.getStatusCode().value(), e.getStatusText()));
+            return Response.withError(new Error(e.getStatusCode().value(), e.getResponseBodyAsString()));
         }
 
         HttpEntity<ValidationDTO> requestPrintScript = createPrintScriptRequest(code, version);
         try {
-            postRequest(printScriptWebClient, "/runner/validate", requestPrintScript);
+            postRequest(printScriptWebClient, "/runner/validate", requestPrintScript, Void.class);
         } catch (HttpClientErrorException e) {
             TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
-            return Response.withError(new Error(e.getStatusCode().value(), e.getStatusText()));
+            return Response.withError(new Error(e.getStatusCode().value(), e.getResponseBodyAsString()));
         }
 
         return Response.withData(snippetId);
@@ -85,49 +85,24 @@ public class SnippetService {
 
             HttpEntity<PermissionsDTO> requestPermissions = createPostPermissionsRequest(userId, snippetId, token);
             try {
-                postRequest(permissionsWebClient, "/snippets/save/relationship", requestPermissions);
+                postRequest(permissionsWebClient, "/snippets/save/relationship", requestPermissions, Void.class);
             } catch (HttpClientErrorException e) {
                 TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
-                return Response.withError(new Error(e.getStatusCode().value(), e.getStatusText()));
+                return Response.withError(new Error(e.getStatusCode().value(), e.getResponseBodyAsString()));
             }
 
             HttpEntity<MultiValueMap<String, Object>> requestPrintScript = createPrintScriptFileRequest(file, version);
             try {
-                postRequest(printScriptWebClient, "/runner/validate/file", requestPrintScript);
+                postRequest(printScriptWebClient, "/runner/validate/file", requestPrintScript, Void.class);
             } catch (HttpClientErrorException e) {
                 TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
-                return Response.withError(new Error(e.getStatusCode().value(), e.getStatusText()));
+                return Response.withError(new Error(e.getStatusCode().value(), e.getResponseBodyAsString()));
             }
 
             return Response.withData(snippetId);
         } catch (Exception e) {
             return Response.withError(new Error(500, e.getMessage()));
         }
-    }
-
-    public Response<String> getSnippet(String snippetId) {
-        try {
-            Optional<Snippet> snippet = snippetRepository.findById(snippetId);
-            if (snippet.isEmpty()) {
-                Error error = new Error(404, "Snippet not found");
-                return Response.withError(error);
-            }
-            String file = new String(snippet.get().getSnippet());
-            return Response.withData(file);
-        } catch (Exception e) {
-            Error error = new Error(500, "Internal server error");
-            return Response.withError(error);
-        }
-    }
-
-    public Response<String> deleteSnippet(String snippetId) {
-        boolean exists = snippetRepository.existsById(snippetId);
-        if (!exists) {
-            return Response.withError(new Error(404, "Snippet not found"));
-        }
-
-        snippetRepository.deleteById(snippetId);
-        return Response.withData(snippetId);
     }
 
     public Response<String> updateSnippet(MultipartFile file, UpdateSnippetDTO updateSnippetDTO, String token) {
@@ -141,19 +116,16 @@ public class SnippetService {
                 return Response.withError(new Error(404, "Snippet not found"));
             }
 
-            HttpEntity<Void> requestPermissions = createGetPermissionsRequest(token);
-            try {
-                String path = "/snippets/hasAccess?snippetId=" + snippetId + "&userId=" + userId;
-                getRequest(permissionsWebClient, path, requestPermissions);
-            } catch (HttpClientErrorException e) {
-                return Response.withError(new Error(e.getStatusCode().value(), e.getStatusText()));
+            Response<Void> permissionsResponse = checkPermissions(snippetId, userId, token);
+            if (permissionsResponse.isError()) {
+                return Response.withError(permissionsResponse.getError());
             }
 
             HttpEntity<MultiValueMap<String, Object>> requestPrintScript = createPrintScriptFileRequest(file, version);
             try {
-                postRequest(printScriptWebClient, "/runner/validate/file", requestPrintScript);
+                postRequest(printScriptWebClient, "/runner/validate/file", requestPrintScript, Void.class);
             } catch (HttpClientErrorException e) {
-                return Response.withError(new Error(e.getStatusCode().value(), e.getStatusText()));
+                return Response.withError(new Error(e.getStatusCode().value(), e.getResponseBodyAsString()));
             }
 
             Snippet snippet = snippetOptional.get();
@@ -172,12 +144,9 @@ public class SnippetService {
 
     public Response<SnippetDetails> getSnippetDetails(String snippetId, String userId, String token) {
         try {
-            HttpEntity<Void> requestPermissions = createGetPermissionsRequest(token);
-            try {
-                String path = "/snippets/hasAccess?snippetId=" + snippetId + "&userId=" + userId;
-                getRequest(permissionsWebClient, path, requestPermissions);
-            } catch (HttpClientErrorException e) {
-                return Response.withError(new Error(e.getStatusCode().value(), e.getStatusText()));
+            Response<Void> permissionsResponse = checkPermissions(snippetId, userId, token);
+            if (permissionsResponse.isError()) {
+                return Response.withError(permissionsResponse.getError());
             }
 
             Optional<Snippet> snippetOpt = snippetRepository.findById(snippetId);
@@ -197,13 +166,14 @@ public class SnippetService {
         }
     }
 
-    private void postRequest(RestTemplate webClient, String path, HttpEntity<?> request) {
-        String url = createUrl(webClient, path);
-        webClient.postForEntity(url, request, Void.class);
-    }
-
-    private void getRequest(RestTemplate webClient, String path, HttpEntity<?> request) {
-        String url = createUrl(webClient, path);
-        webClient.getForEntity(url, Object.class, request);
+    private Response<Void> checkPermissions(String snippetId, String userId, String token) {
+        HttpEntity<Void> requestPermissions = createGetPermissionsRequest(token);
+        try {
+            String path = "/snippets/hasAccess?snippetId=" + snippetId + "&userId=" + userId;
+            getRequest(permissionsWebClient, path, requestPermissions, Void.class);
+            return Response.withData(null);
+        } catch (HttpClientErrorException e) {
+            return Response.withError(new Error(e.getStatusCode().value(), e.getResponseBodyAsString()));
+        }
     }
 }

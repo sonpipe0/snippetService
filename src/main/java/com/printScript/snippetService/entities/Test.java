@@ -1,6 +1,5 @@
 package com.printScript.snippetService.entities;
 
-
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
