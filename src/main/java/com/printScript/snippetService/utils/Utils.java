@@ -1,8 +1,7 @@
 package com.printScript.snippetService.utils;
 
-import com.printScript.snippetService.DTO.PermissionsDTO;
-import com.printScript.snippetService.DTO.ValidationDTO;
 import java.io.IOException;
+
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.*;
 import org.springframework.util.LinkedMultiValueMap;
@@ -10,6 +9,9 @@ import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.util.UriComponentsBuilder;
+
+import com.printScript.snippetService.DTO.PermissionsDTO;
+import com.printScript.snippetService.DTO.ValidationDTO;
 
 public class Utils {
     public static ResponseEntity<Object> checkMediaType(String contentType) {

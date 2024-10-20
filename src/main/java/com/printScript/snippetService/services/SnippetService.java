@@ -2,13 +2,10 @@ package com.printScript.snippetService.services;
 
 import static com.printScript.snippetService.utils.Utils.*;
 
-import com.printScript.snippetService.DTO.*;
-import com.printScript.snippetService.entities.Snippet;
-import com.printScript.snippetService.errorDTO.Error;
-import com.printScript.snippetService.repositories.SnippetRepository;
-import jakarta.transaction.Transactional;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.Optional;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpEntity;
 import org.springframework.stereotype.Service;
@@ -18,6 +15,17 @@ import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.printScript.snippetService.DTO.*;
+import com.printScript.snippetService.entities.Snippet;
+import com.printScript.snippetService.errorDTO.Error;
+import com.printScript.snippetService.errorDTO.ErrorMessage;
+import com.printScript.snippetService.repositories.SnippetRepository;
+
+import jakarta.transaction.Transactional;
+
 @Service
 public class SnippetService {
 
@@ -26,11 +34,14 @@ public class SnippetService {
 
     private final RestTemplate permissionsWebClient;
     private final RestTemplate printScriptWebClient;
+    private final ObjectMapper objectMapper;
 
     @Autowired
-    public SnippetService(RestTemplateService permissionsRestTemplate, RestTemplateService printScriptRestTemplate) {
+    public SnippetService(RestTemplateService permissionsRestTemplate, RestTemplateService printScriptRestTemplate,
+            ObjectMapper objectMapper) {
         this.permissionsWebClient = permissionsRestTemplate.getRestTemplate();
         this.printScriptWebClient = printScriptRestTemplate.getRestTemplate();
+        this.objectMapper = objectMapper;
     }
 
     @Transactional
@@ -45,7 +56,19 @@ public class SnippetService {
         snippet.setDescription(snippetDTO.getDescription());
         snippet.setLanguage(snippetDTO.getLanguage());
         snippet.setVersion(version);
-        snippetRepository.save(snippet);
+
+        if (!snippet.isValid()) {
+            List<String> invalidFields = snippet.getInvalidFields();
+            String message = "Invalid body: " + String.join(", ", invalidFields)
+                    + (invalidFields.size() > 1 ? " are required" : " is required");
+            return Response.withError(new Error<>(400, message));
+        }
+        try {
+            snippetRepository.save(snippet);
+        } catch (Exception e) {
+            TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
+            return Response.withError(new Error<>(500, e.getMessage()));
+        }
 
         String snippetId = snippet.getId();
 
@@ -54,15 +77,14 @@ public class SnippetService {
             postRequest(permissionsWebClient, "/snippets/save/relationship", requestPermissions, Void.class);
         } catch (HttpClientErrorException e) {
             TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
-            return Response.withError(new Error(e.getStatusCode().value(), e.getResponseBodyAsString()));
+            return Response.withError(new Error<>(e.getStatusCode().value(), e.getResponseBodyAsString()));
         }
 
         HttpEntity<ValidationDTO> requestPrintScript = createPrintScriptRequest(code, version);
         try {
             postRequest(printScriptWebClient, "/runner/validate", requestPrintScript, Void.class);
         } catch (HttpClientErrorException e) {
-            TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
-            return Response.withError(new Error(e.getStatusCode().value(), e.getResponseBodyAsString()));
+            return getValidationErrors(e);
         }
 
         return Response.withData(snippetId);
@@ -88,20 +110,19 @@ public class SnippetService {
                 postRequest(permissionsWebClient, "/snippets/save/relationship", requestPermissions, Void.class);
             } catch (HttpClientErrorException e) {
                 TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
-                return Response.withError(new Error(e.getStatusCode().value(), e.getResponseBodyAsString()));
+                return Response.withError(new Error<>(e.getStatusCode().value(), e.getResponseBodyAsString()));
             }
 
             HttpEntity<MultiValueMap<String, Object>> requestPrintScript = createPrintScriptFileRequest(file, version);
             try {
                 postRequest(printScriptWebClient, "/runner/validate/file", requestPrintScript, Void.class);
             } catch (HttpClientErrorException e) {
-                TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
-                return Response.withError(new Error(e.getStatusCode().value(), e.getResponseBodyAsString()));
+                return getValidationErrors(e);
             }
 
             return Response.withData(snippetId);
         } catch (Exception e) {
-            return Response.withError(new Error(500, e.getMessage()));
+            return Response.withError(new Error<>(500, e.getMessage()));
         }
     }
 
@@ -113,7 +134,7 @@ public class SnippetService {
 
             Optional<Snippet> snippetOptional = snippetRepository.findById(snippetId);
             if (snippetOptional.isEmpty()) {
-                return Response.withError(new Error(404, "Snippet not found"));
+                return Response.withError(new Error<>(404, "Snippet not found"));
             }
 
             Response<Void> permissionsResponse = checkPermissions(snippetId, userId, token);
@@ -125,7 +146,7 @@ public class SnippetService {
             try {
                 postRequest(printScriptWebClient, "/runner/validate/file", requestPrintScript, Void.class);
             } catch (HttpClientErrorException e) {
-                return Response.withError(new Error(e.getStatusCode().value(), e.getResponseBodyAsString()));
+                return Response.withError(new Error<>(e.getStatusCode().value(), e.getResponseBodyAsString()));
             }
 
             Snippet snippet = snippetOptional.get();
@@ -138,7 +159,7 @@ public class SnippetService {
 
             return Response.withData("Snippet updated successfully");
         } catch (Exception e) {
-            return Response.withError(new Error(500, "Internal server error"));
+            return Response.withError(new Error<>(500, "Internal server error"));
         }
     }
 
@@ -151,7 +172,7 @@ public class SnippetService {
 
             Optional<Snippet> snippetOpt = snippetRepository.findById(snippetId);
             if (snippetOpt.isEmpty()) {
-                return Response.withError(new Error(404, "Snippet not found"));
+                return Response.withError(new Error<>(404, "Snippet not found"));
             }
 
             Snippet snippet = snippetOpt.get();
@@ -162,7 +183,7 @@ public class SnippetService {
 
             return Response.withData(snippetDetails);
         } catch (Exception e) {
-            return Response.withError(new Error(500, "Internal server error"));
+            return Response.withError(new Error<>(500, "Internal server error"));
         }
     }
 
@@ -173,7 +194,19 @@ public class SnippetService {
             getRequest(permissionsWebClient, path, requestPermissions, Void.class);
             return Response.withData(null);
         } catch (HttpClientErrorException e) {
-            return Response.withError(new Error(e.getStatusCode().value(), e.getResponseBodyAsString()));
+            return Response.withError(new Error<>(e.getStatusCode().value(), e.getResponseBodyAsString()));
+        }
+    }
+
+    private Response<String> getValidationErrors(HttpClientErrorException e) {
+        TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
+        try {
+            List<ErrorMessage> errorMessages = objectMapper.readValue(e.getResponseBodyAsString(),
+                    new TypeReference<List<ErrorMessage>>() {
+                    });
+            return Response.withError(new Error<>(e.getStatusCode().value(), errorMessages));
+        } catch (JsonProcessingException ex) {
+            return Response.withError(new Error<>(e.getStatusCode().value(), e.getResponseBodyAsString()));
         }
     }
 }

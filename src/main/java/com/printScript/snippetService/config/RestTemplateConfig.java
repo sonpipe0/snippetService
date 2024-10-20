@@ -1,9 +1,10 @@
 package com.printScript.snippetService.config;
 
-import com.printScript.snippetService.services.RestTemplateService;
 import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+
+import com.printScript.snippetService.services.RestTemplateService;
 
 @Configuration
 public class RestTemplateConfig {

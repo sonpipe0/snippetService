@@ -2,14 +2,16 @@ package com.printScript.snippetService.controllers;
 
 import static com.printScript.snippetService.utils.Utils.checkMediaType;
 
-import com.printScript.snippetService.DTO.*;
-import com.printScript.snippetService.services.SnippetService;
 import java.util.Map;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+
+import com.printScript.snippetService.DTO.*;
+import com.printScript.snippetService.services.SnippetService;
 
 @RestController
 @RequestMapping("/snippet")
@@ -23,8 +25,7 @@ public class SnippetController {
             @RequestHeader("Authorization") String token) {
         Response<String> response = snippetService.saveSnippet(snippetDTO, token);
         if (response.isError()) {
-            return new ResponseEntity<>(response.getError().message(),
-                    HttpStatusCode.valueOf(response.getError().code()));
+            return new ResponseEntity<>(response.getError().body(), HttpStatusCode.valueOf(response.getError().code()));
         }
         return ResponseEntity.ok(response.getData());
     }
@@ -39,8 +40,7 @@ public class SnippetController {
 
         Response<String> response = snippetService.saveFromMultiPart(file, snippetInfoDTO, token);
         if (response.isError()) {
-            return new ResponseEntity<>(response.getError().message(),
-                    HttpStatusCode.valueOf(response.getError().code()));
+            return new ResponseEntity<>(response.getError().body(), HttpStatusCode.valueOf(response.getError().code()));
         }
         return ResponseEntity.ok(response.getData());
     }
@@ -55,8 +55,7 @@ public class SnippetController {
 
         Response<String> response = snippetService.updateSnippet(file, updateSnippetDTO, token);
         if (response.isError()) {
-            return new ResponseEntity<>(response.getError().message(),
-                    HttpStatusCode.valueOf(response.getError().code()));
+            return new ResponseEntity<>(response.getError().body(), HttpStatusCode.valueOf(response.getError().code()));
         }
         return ResponseEntity.ok("Snippet updated successfully");
     }
@@ -69,8 +68,7 @@ public class SnippetController {
 
         Response<SnippetDetails> response = snippetService.getSnippetDetails(snippetId, userId, token);
         if (response.isError()) {
-            return new ResponseEntity<>(response.getError().message(),
-                    HttpStatusCode.valueOf(response.getError().code()));
+            return new ResponseEntity<>(response.getError().body(), HttpStatusCode.valueOf(response.getError().code()));
         }
         return ResponseEntity.ok(response.getData());
     }

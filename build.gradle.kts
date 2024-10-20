@@ -47,6 +47,8 @@ checkstyle {
 spotless {
     java {
         googleJavaFormat("1.23.0")
+        importOrder("java", "javax", "org", "com", "")
+        removeUnusedImports()
         eclipse().configFile("config/eclipse/eclipse-java-formatter.xml")
         target("src/**/*.java")
     }

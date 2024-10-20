@@ -8,13 +8,16 @@ import lombok.Setter;
 @Setter
 public class SnippetDTO {
 
+    @NonNull
     private String userId;
 
+    @NonNull
     private String code;
 
     @NonNull
     private String title;
 
+    @NonNull
     private String description;
 
     @NonNull

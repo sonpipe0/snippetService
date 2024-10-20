@@ -1,8 +1,9 @@
 package com.printScript.snippetService.entities;
 
-import jakarta.persistence.*;
-import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
+
+import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -17,25 +18,44 @@ public class Snippet {
     @GeneratedValue(strategy = GenerationType.UUID)
     private String id;
 
-    @Column
+    @Column(nullable = false)
     private String title;
 
     @Column
     private String description;
 
-    @Column
+    @Column(nullable = false)
     private String language;
 
-    @Column
+    @Column(nullable = false)
     private String version;
 
     @Lob
-    @Column
+    @Column(nullable = false)
     private byte[] snippet;
-
-    @Column
-    private LocalDateTime lastAccessed;
 
     @OneToMany(mappedBy = "snippet", cascade = CascadeType.ALL)
     private List<Test> tests;
+
+    public boolean isValid() {
+        return title != null && !title.isEmpty() && language != null && !language.isEmpty() && version != null
+                && !version.isEmpty() && snippet != null && snippet.length > 0;
+    }
+
+    public List<String> getInvalidFields() {
+        List<String> invalidFields = new ArrayList<>();
+        if (title == null || title.isEmpty()) {
+            invalidFields.add("title");
+        }
+        if (language == null || language.isEmpty()) {
+            invalidFields.add("language");
+        }
+        if (version == null || version.isEmpty()) {
+            invalidFields.add("version");
+        }
+        if (snippet == null || snippet.length == 0) {
+            invalidFields.add("snippet");
+        }
+        return invalidFields;
+    }
 }
