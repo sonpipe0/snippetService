@@ -1,21 +1,16 @@
 package com.printScript.snippetService.utils;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.printScript.snippetService.DTO.Response;
-import com.printScript.snippetService.errorDTO.Error;
-import com.printScript.snippetService.services.WebClientService;
+import com.printScript.snippetService.DTO.PermissionsDTO;
+import com.printScript.snippetService.DTO.ValidationDTO;
 import org.springframework.core.io.ByteArrayResource;
-import org.springframework.http.HttpStatusCode;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.*;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
+import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
-import reactor.core.publisher.Mono;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import java.io.IOException;
-import java.util.Map;
 
 public class Utils {
     public static ResponseEntity<Object> checkMediaType(String contentType) {
@@ -25,7 +20,39 @@ public class Utils {
         return null;
     }
 
-    public static MultiValueMap<String, Object> toMultiValueMap(MultipartFile file, String version) throws IOException {
+    public static HttpEntity<PermissionsDTO> createPostPermissionsRequest(String userId, String snippetId, String token) {
+        PermissionsDTO permissionDTO = new PermissionsDTO(userId, snippetId);
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("Authorization", token);
+        return new HttpEntity<>(permissionDTO, headers);
+    }
+
+    public static HttpEntity<Void> createGetPermissionsRequest(String token) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("Authorization", token);
+        return new HttpEntity<>(headers);
+    }
+
+    public static HttpEntity<ValidationDTO> createPrintScriptRequest(String code, String version) {
+        ValidationDTO validationDTO = new ValidationDTO(code, version);
+        return new HttpEntity<>(validationDTO);
+    }
+
+    public static HttpEntity<MultiValueMap<String, Object>> createPrintScriptFileRequest(MultipartFile file, String version) throws IOException {
+        MultiValueMap<String, Object> body = toMultiValueMap(file, version);
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.MULTIPART_FORM_DATA);
+        return new HttpEntity<>(body, headers);
+    }
+
+    public static String createUrl(RestTemplate printScriptWebClient, String path) {
+        String rootUri = printScriptWebClient.getUriTemplateHandler().expand("/").toString();
+        return UriComponentsBuilder.fromHttpUrl(rootUri)
+                .path(path)
+                .toUriString();
+    }
+
+    private static MultiValueMap<String, Object> toMultiValueMap(MultipartFile file, String version) throws IOException {
         MultiValueMap<String, Object> map = new LinkedMultiValueMap<>();
         map.add("file", new ByteArrayResource(file.getBytes()) {
             @Override
@@ -36,62 +63,5 @@ public class Utils {
         map.add("version", version);
 
         return map;
-    }
-
-    public static JsonNode executePermissionsGet(WebClientService webClientService, String url, String token, ObjectMapper jacksonObjectMapper) {
-        return webClientService.get(url, httpHeaders -> {
-            httpHeaders.setContentType(org.springframework.http.MediaType.APPLICATION_JSON);
-            httpHeaders.set("Authorization", token);
-        }, error -> {
-            Response<Error> errorResponse = Response.errorFromWebFluxError(error);
-            return Mono.just(jacksonObjectMapper.valueToTree(errorResponse));
-        }).block();
-    }
-
-    public static JsonNode executePermissionsPost(WebClientService webClientService, String url, String token, Map<String, Object> body, ObjectMapper jacksonObjectMapper) {
-        return webClientService.postObject(url, body, httpHeaders -> {
-            httpHeaders.setContentType(org.springframework.http.MediaType.APPLICATION_JSON);
-            httpHeaders.set("Authorization", token);
-        }, error -> {
-            Response<Error> errorResponse = Response.errorFromWebFluxError(error);
-            return Mono.just(jacksonObjectMapper.valueToTree(errorResponse));
-        }).block();
-    }
-
-    public static JsonNode executePermissionsPostFile(WebClientService webClientService, String url, String token, MultiValueMap<String, Object> body, ObjectMapper jacksonObjectMapper) {
-        return webClientService.uploadMultipart(url, body, httpHeaders -> {
-            httpHeaders.setContentType(MediaType.MULTIPART_FORM_DATA);
-            httpHeaders.set("Authorization", token);
-        }, error -> {
-            Response<Error> errorResponse = Response.errorFromWebFluxError(error);
-            return Mono.just(jacksonObjectMapper.valueToTree(errorResponse));
-        }).block();
-    }
-
-    public static JsonNode executePrintScriptGet(WebClientService webClientService, String url, ObjectMapper jacksonObjectMapper) {
-        return webClientService.get(url, httpHeaders -> {
-            httpHeaders.setContentType(org.springframework.http.MediaType.APPLICATION_JSON);
-        }, error -> {
-            Response<Error> errorResponse = Response.errorFromWebFluxError(error);
-            return Mono.just(jacksonObjectMapper.valueToTree(errorResponse));
-        }).block();
-    }
-
-    public static JsonNode executePrintScriptPost(WebClientService webClientService, String url, Map<String, Object> body, ObjectMapper jacksonObjectMapper) {
-        return webClientService.postObject(url, body, httpHeaders -> {
-            httpHeaders.setContentType(org.springframework.http.MediaType.APPLICATION_JSON);
-        }, error -> {
-            Response<Error> errorResponse = Response.errorFromWebFluxError(error);
-            return Mono.just(jacksonObjectMapper.valueToTree(errorResponse));
-        }).block();
-    }
-
-    public static JsonNode executePrintScriptPostFile(WebClientService webClientService, String url, MultiValueMap<String, Object> body, ObjectMapper jacksonObjectMapper) {
-        return webClientService.uploadMultipart(url, body, httpHeaders -> {
-            httpHeaders.setContentType(MediaType.MULTIPART_FORM_DATA);
-        }, error -> {
-            Response<Error> errorResponse = Response.errorFromWebFluxError(error);
-            return Mono.just(jacksonObjectMapper.valueToTree(errorResponse));
-        }).block();
     }
 }

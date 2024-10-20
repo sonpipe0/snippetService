@@ -28,10 +28,14 @@ jobs:
         if: github.ref == 'refs/heads/master'
         run: |
           docker build -t ${{ secrets.DOCKER_USERNAME }}/snippet-service:latest-stable .
+          docker tag ${{ secrets.DOCKER_USERNAME }}/snippet-service:latest-stable ghcr.io/${{ github.repository_owner }}/snippet-service:latest-stable
+          docker push ${{ secrets.DOCKER_USERNAME }}/snippet-service:latest-stable
           docker push ghcr.io/${{ github.repository_owner }}/snippet-service:latest-stable
 
       - name: Build and push (latest-stable) for dev
         if: github.ref == 'refs/heads/dev'
         run: |
-          docker build -t ghcr.io/${{ github.repository_owner }}/snippet-service:latest-dev .
+          docker build -t ${{ secrets.DOCKER_USERNAME }}/snippet-service:latest-dev .
+          docker tag ${{ secrets.DOCKER_USERNAME }}/snippet-service:latest-dev ghcr.io/${{ github.repository_owner }}/snippet-service:latest-dev
+          docker push ${{ secrets.DOCKER_USERNAME }}/snippet-service:latest-dev
           docker push ghcr.io/${{ github.repository_owner }}/snippet-service:latest-dev
