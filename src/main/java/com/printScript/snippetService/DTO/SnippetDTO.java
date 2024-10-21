@@ -1,28 +1,26 @@
 package com.printScript.snippetService.DTO;
 
+import jakarta.validation.constraints.NotEmpty;
 import lombok.Getter;
-import lombok.NonNull;
 import lombok.Setter;
 
 @Getter
 @Setter
 public class SnippetDTO {
 
-    @NonNull
+    @NotEmpty
     private String userId;
 
-    @NonNull
-    private String code;
-
-    @NonNull
+    @NotEmpty
     private String title;
 
-    @NonNull
     private String description;
 
-    @NonNull
+    @NotEmpty
     private String language;
 
-    @NonNull
+    @NotEmpty
     private String version;
+
+    private String code;
 }

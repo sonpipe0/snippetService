@@ -38,22 +38,32 @@ public class SnippetController {
             return mediaTypeCheck;
         }
 
-        Response<String> response = snippetService.saveFromMultiPart(file, snippetInfoDTO, token);
+        Response<String> response = snippetService.saveSnippetFile(file, snippetInfoDTO, token);
         if (response.isError()) {
             return new ResponseEntity<>(response.getError().body(), HttpStatusCode.valueOf(response.getError().code()));
         }
         return ResponseEntity.ok(response.getData());
     }
 
+    @PostMapping("/update")
+    public ResponseEntity<Object> updateSnippet(@RequestBody UpdateSnippetDTO updateSnippetDTO,
+            @RequestHeader("Authorization") String token) {
+        Response<String> response = snippetService.updateSnippet(updateSnippetDTO, token);
+        if (response.isError()) {
+            return new ResponseEntity<>(response.getError().body(), HttpStatusCode.valueOf(response.getError().code()));
+        }
+        return ResponseEntity.ok("Snippet updated successfully");
+    }
+
     @PostMapping("/update/file")
     public ResponseEntity<Object> updateSnippetFile(@RequestPart MultipartFile file,
-            @RequestPart UpdateSnippetDTO updateSnippetDTO, @RequestHeader("Authorization") String token) {
+            @RequestPart UpdateSnippetInfoDTO updateSnippetInfoDTO, @RequestHeader("Authorization") String token) {
         ResponseEntity<Object> mediaTypeCheck = checkMediaType(file.getContentType());
         if (mediaTypeCheck != null) {
             return mediaTypeCheck;
         }
 
-        Response<String> response = snippetService.updateSnippet(file, updateSnippetDTO, token);
+        Response<String> response = snippetService.updateSnippetFile(file, updateSnippetInfoDTO, token);
         if (response.isError()) {
             return new ResponseEntity<>(response.getError().body(), HttpStatusCode.valueOf(response.getError().code()));
         }

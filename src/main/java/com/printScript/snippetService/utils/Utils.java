@@ -10,24 +10,23 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.util.UriComponentsBuilder;
 
-import com.printScript.snippetService.DTO.PermissionsDTO;
-import com.printScript.snippetService.DTO.ValidationDTO;
+import com.printScript.snippetService.DTO.Permissions;
+import com.printScript.snippetService.DTO.Validation;
 
 public class Utils {
     public static ResponseEntity<Object> checkMediaType(String contentType) {
         if (contentType == null || (!contentType.equals("text/plain") && !contentType.equals("application/json"))) {
-            return new ResponseEntity<>("Unsupported file type", HttpStatusCode.valueOf(415)); // 415 Unsupported Media
-            // Type
+            return new ResponseEntity<>("Unsupported file type", HttpStatusCode.valueOf(415));
+            // 415 Unsupported Media Type
         }
         return null;
     }
 
-    public static HttpEntity<PermissionsDTO> createPostPermissionsRequest(String userId, String snippetId,
-            String token) {
-        PermissionsDTO permissionDTO = new PermissionsDTO(userId, snippetId);
+    public static HttpEntity<Permissions> createPostPermissionsRequest(String userId, String snippetId, String token) {
+        Permissions permissions = new Permissions(userId, snippetId);
         HttpHeaders headers = new HttpHeaders();
         headers.set("Authorization", token);
-        return new HttpEntity<>(permissionDTO, headers);
+        return new HttpEntity<>(permissions, headers);
     }
 
     public static HttpEntity<Void> createGetPermissionsRequest(String token) {
@@ -36,9 +35,9 @@ public class Utils {
         return new HttpEntity<>(headers);
     }
 
-    public static HttpEntity<ValidationDTO> createPrintScriptRequest(String code, String version) {
-        ValidationDTO validationDTO = new ValidationDTO(code, version);
-        return new HttpEntity<>(validationDTO);
+    public static HttpEntity<Validation> createPrintScriptRequest(String code, String version) {
+        Validation validation = new Validation(code, version);
+        return new HttpEntity<>(validation);
     }
 
     public static HttpEntity<MultiValueMap<String, Object>> createPrintScriptFileRequest(MultipartFile file,
