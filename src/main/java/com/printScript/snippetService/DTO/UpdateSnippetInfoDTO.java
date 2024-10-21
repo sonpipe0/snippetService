@@ -6,7 +6,7 @@ import lombok.Setter;
 
 @Getter
 @Setter
-public class UpdateSnippetDTO {
+public class UpdateSnippetInfoDTO {
 
     @NotEmpty
     private String userId;
@@ -24,6 +24,4 @@ public class UpdateSnippetDTO {
 
     @NotEmpty
     private String version;
-
-    private String code;
 }
