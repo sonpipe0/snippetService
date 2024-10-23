@@ -72,9 +72,11 @@ public class SnippetService {
 
         String snippetId = snippet.getId();
 
-        Response<String> permissionsResponse = saveRelation(token, userId, snippetId);
-        if (permissionsResponse.isError())
+        Response<String> permissionsResponse = saveRelation(token, userId, snippetId, "/snippets/save/relationship");
+        if (permissionsResponse.isError()) {
+            TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
             return permissionsResponse;
+        }
 
         Response<String> printScriptResponse = validateCode(code, version);
         if (printScriptResponse.isError()) {
@@ -100,9 +102,11 @@ public class SnippetService {
 
             String snippetId = snippet.getId();
 
-            Response<String> permissionsResponse = saveRelation(token, userId, snippetId);
-            if (permissionsResponse.isError())
+            Response<String> permissionsResponse = saveRelation(token, userId, snippetId, "/snippets/save/relationship");
+            if (permissionsResponse.isError()) {
+                TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
                 return permissionsResponse;
+            }
 
             Response<String> printScriptResponse = validateFileCode(file, version);
             if (printScriptResponse.isError()) {
@@ -198,13 +202,26 @@ public class SnippetService {
         return Response.withData(snippetDetails);
     }
 
-    private Response<String> saveRelation(String token, String userId, String snippetId) {
+    public Response<String> shareSnippet(String userId, ShareSnippetDTO shareSnippetDTO, String token) {
+        Response<String> permissionsResponse = checkPermissions(shareSnippetDTO.getSnippetId(), userId, token);
+        if (permissionsResponse.isError())
+            return permissionsResponse;
+
+        Response<String> permissionsResponse2 = saveRelation(token, shareSnippetDTO.getToUserId(),
+                shareSnippetDTO.getSnippetId(), "/snippets/save/share/relationship");
+        if (permissionsResponse2.isError()) {
+            return permissionsResponse2;
+        }
+
+        return Response.withData("Snippet shared successfully");
+    }
+
+    private Response<String> saveRelation(String token, String userId, String snippetId, String path) {
         HttpEntity<Permissions> requestPermissions = createPostPermissionsRequest(userId, snippetId, token);
         try {
-            postRequest(permissionsWebClient, "/snippets/save/relationship", requestPermissions, Void.class);
+            postRequest(permissionsWebClient, path, requestPermissions, Void.class);
             return Response.withData(null);
         } catch (HttpClientErrorException e) {
-            TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
             return Response.withError(new Error<>(e.getStatusCode().value(), e.getResponseBodyAsString()));
         }
     }
