@@ -2,6 +2,7 @@ package com.printScript.snippetService.services;
 
 import static com.printScript.snippetService.utils.Utils.*;
 
+import java.io.InputStream;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -10,7 +11,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.interceptor.TransactionAspectSupport;
-import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
@@ -38,36 +38,35 @@ public class SnippetService {
 
     private final RestTemplate permissionsWebClient;
     private final RestTemplate printScriptWebClient;
-    private final RestTemplate bucketWebClient;
     private final ObjectMapper objectMapper;
 
     @Autowired
     public SnippetService(RestTemplateService permissionsRestTemplate, RestTemplateService printScriptRestTemplate,
-            RestTemplateService bucketRestTemplate, ObjectMapper objectMapper) {
+            ObjectMapper objectMapper) {
         this.permissionsWebClient = permissionsRestTemplate.getRestTemplate();
         this.printScriptWebClient = printScriptRestTemplate.getRestTemplate();
-        this.bucketWebClient = bucketRestTemplate.getRestTemplate();
         this.objectMapper = objectMapper;
     }
 
     @Transactional
     public Response<String> saveSnippet(SnippetDTO snippetDTO, String token) {
         String userId = snippetDTO.getUserId();
-        String code = snippetDTO.getCode();
+        String title = snippetDTO.getTitle();
+        String language = snippetDTO.getLanguage();
         String version = snippetDTO.getVersion();
+        String code = snippetDTO.getCode();
+
+        Response<String> validation = validateRequest(
+                Map.of("userId", userId, "title", title, "language", language, "version", version, "code", code));
+        if (validation.isError())
+            return validation;
 
         Snippet snippet = new Snippet();
-        snippet.setTitle(snippetDTO.getTitle());
+        snippet.setTitle(title);
         snippet.setDescription(snippetDTO.getDescription());
-        snippet.setLanguage(snippetDTO.getLanguage());
+        snippet.setLanguage(language);
         snippet.setVersion(version);
 
-        List<String> invalidFields = snippet.getInvalidFields();
-        if (!invalidFields.isEmpty()) {
-            String message = "Invalid body: " + String.join(", ", invalidFields)
-                    + (invalidFields.size() > 1 ? " are required" : " is required");
-            return Response.withError(new Error<>(400, message));
-        }
         try {
             snippetRepository.save(snippet);
         } catch (Exception e) {
@@ -96,49 +95,18 @@ public class SnippetService {
         return Response.withData(snippetId);
     }
 
-    @Transactional
-    public Response<String> saveSnippetFile(MultipartFile file, SnippetInfoDTO snippetInfoDTO, String token) {
-        try {
-            String userId = snippetInfoDTO.getUserId();
-            String version = snippetInfoDTO.getVersion();
-
-            Snippet snippet = new Snippet();
-            snippet.setTitle(snippetInfoDTO.getTitle());
-            snippet.setDescription(snippetInfoDTO.getDescription());
-            snippet.setLanguage(snippetInfoDTO.getLanguage());
-            snippetRepository.save(snippet);
-
-            String snippetId = snippet.getId();
-
-            Response<String> permissionsResponse = saveRelation(token, userId, snippetId,
-                    "/snippets/save/relationship");
-            if (permissionsResponse.isError()) {
-                TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
-                return permissionsResponse;
-            }
-
-            Response<String> printScriptResponse = validateFileCode(file, version);
-            if (printScriptResponse.isError()) {
-                TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
-                return printScriptResponse;
-            }
-
-            Response<Void> response = bucketRequestExecutor.put("snippets/" + snippetId, new String(file.getBytes()),
-                    token);
-            if (response.isError())
-                return Response.withError(response.getError());
-
-            return Response.withData(snippetId);
-        } catch (Exception e) {
-            return Response.withError(new Error<>(500, e.getMessage()));
-        }
-    }
-
     public Response<String> updateSnippet(UpdateSnippetDTO updateSnippetDTO, String token) {
-        String snippetId = updateSnippetDTO.getSnippetId();
         String userId = updateSnippetDTO.getUserId();
-        String code = updateSnippetDTO.getCode();
+        String snippetId = updateSnippetDTO.getSnippetId();
+        String title = updateSnippetDTO.getTitle();
+        String language = updateSnippetDTO.getLanguage();
         String version = updateSnippetDTO.getVersion();
+        String code = updateSnippetDTO.getCode();
+
+        Response<String> validation = validateRequest(Map.of("snippetId", snippetId, "userId", userId, "title", title,
+                "language", language, "version", version, "code", code));
+        if (validation.isError())
+            return validation;
 
         Optional<Snippet> snippetOptional = snippetRepository.findById(snippetId);
         if (snippetOptional.isEmpty()) {
@@ -154,55 +122,24 @@ public class SnippetService {
             return printScriptResponse;
 
         Snippet snippet = snippetOptional.get();
-        snippet.setTitle(updateSnippetDTO.getTitle());
+        snippet.setTitle(title);
         snippet.setDescription(updateSnippetDTO.getDescription());
-        snippet.setLanguage(updateSnippetDTO.getLanguage());
+        snippet.setLanguage(language);
         snippet.setVersion(version);
-        snippetRepository.save(snippet);
 
-        Response<Void> response = bucketRequestExecutor.put("snippets/" + snippetId, code, token);
+        try {
+            snippetRepository.save(snippet);
+        } catch (Exception e) {
+            TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
+            return Response.withError(new Error<>(500, e.getMessage()));
+        }
+
+        bucketRequestExecutor.put("snippets/" + snippetId, code, token);
         return Response.withData("Snippet updated successfully");
     }
 
-    public Response<String> updateSnippetFile(MultipartFile file, UpdateSnippetInfoDTO updateSnippetInfoDTO,
-            String token) {
-        try {
-            String snippetId = updateSnippetInfoDTO.getSnippetId();
-            String version = updateSnippetInfoDTO.getVersion();
-            String userId = updateSnippetInfoDTO.getUserId();
-
-            Optional<Snippet> snippetOptional = snippetRepository.findById(snippetId);
-            if (snippetOptional.isEmpty()) {
-                return Response.withError(new Error<>(404, "Snippet not found"));
-            }
-
-            Response<String> permissionsResponse = checkPermissions(snippetId, userId, token, "/snippets/canEdit");
-            if (permissionsResponse.isError())
-                return permissionsResponse;
-
-            Response<String> printScriptResponse = validateFileCode(file, version);
-            if (printScriptResponse.isError())
-                return printScriptResponse;
-
-            Snippet snippet = snippetOptional.get();
-            snippet.setTitle(updateSnippetInfoDTO.getTitle());
-            snippet.setDescription(updateSnippetInfoDTO.getDescription());
-            snippet.setLanguage(updateSnippetInfoDTO.getLanguage());
-            snippet.setVersion(version);
-            snippetRepository.save(snippet);
-
-            Response<Void> response = bucketRequestExecutor.put("snippets/" + snippetId, new String(file.getBytes()),
-                    token);
-            if (response.isError())
-                return Response.withError(response.getError());
-
-            return Response.withData("Snippet updated successfully");
-        } catch (Exception e) {
-            return Response.withError(new Error<>(500, e.getMessage()));
-        }
-    }
-
-    public Response<SnippetDetails> getSnippetDetails(String snippetId, String userId, String token) {
+    public Response<SnippetDetails> getSnippetDetails(String snippetId, String userId, String token,
+            MultipartFile configFile) {
         Optional<Snippet> snippetOpt = snippetRepository.findById(snippetId);
         if (snippetOpt.isEmpty()) {
             return Response.withError(new Error<>(404, "Snippet not found"));
@@ -214,12 +151,25 @@ public class SnippetService {
 
         Snippet snippet = snippetOpt.get();
 
-        Response<String> code = bucketRequestExecutor.get("snippets/" + snippetId, token);
-        if (code.isError())
-            return Response.withError(code.getError());
+        Response<String> response = bucketRequestExecutor.get("snippets/" + snippetId, token);
+        if (response.isError())
+            return Response.withError(response.getError());
+
+        String code = response.getData();
+        String version = snippet.getVersion();
+        InputStream config;
+        try {
+            config = configFile.getInputStream();
+        } catch (Exception e) {
+            return Response.withError(new Error<>(500, e.getMessage()));
+        }
+
+        Response<List<ErrorMessage>> printScriptResponse = getLintingErrors(code, version, config);
+        if (printScriptResponse.isError())
+            return Response.withError(printScriptResponse.getError());
 
         SnippetDetails snippetDetails = new SnippetDetails(snippet.getTitle(), snippet.getDescription(),
-                snippet.getLanguage(), snippet.getVersion(), code.getData());
+                snippet.getLanguage(), version, code, printScriptResponse.getData());
 
         return Response.withData(snippetDetails);
     }
@@ -262,26 +212,12 @@ public class SnippetService {
     }
 
     private Response<String> validateCode(String code, String version) {
-        HttpEntity<Validation> requestPrintScript = createPrintScriptRequest(code, version);
+        HttpEntity<Validation> requestPrintScript = createValidatePrintScriptRequest(code, version);
         try {
             postRequest(printScriptWebClient, "/runner/validate", requestPrintScript, Void.class);
             return Response.withData(null);
         } catch (HttpClientErrorException e) {
             return getValidationErrors(e);
-        }
-    }
-
-    private Response<String> validateFileCode(MultipartFile file, String version) {
-        try {
-            HttpEntity<MultiValueMap<String, Object>> requestPrintScript = createPrintScriptFileRequest(file, version);
-            try {
-                postRequest(printScriptWebClient, "/runner/validate/file", requestPrintScript, Void.class);
-                return Response.withData(null);
-            } catch (HttpClientErrorException e) {
-                return getValidationErrors(e);
-            }
-        } catch (Exception err) {
-            return Response.withError(new Error<>(500, err.getMessage()));
         }
     }
 
@@ -293,6 +229,25 @@ public class SnippetService {
             return Response.withError(new Error<>(e.getStatusCode().value(), errorMessages));
         } catch (JsonProcessingException ex) {
             return Response.withError(new Error<>(e.getStatusCode().value(), e.getResponseBodyAsString()));
+        }
+    }
+
+    private Response<List<ErrorMessage>> getLintingErrors(String code, String version, InputStream config) {
+        HttpEntity<Linting> requestPrintScript = createLintPrintScriptRequest(code, version, config);
+        try {
+            String lintingErrors = getRequest(printScriptWebClient, "/runner/lintingErrors", requestPrintScript,
+                    String.class, Map.of());
+            List<ErrorMessage> lintingErrorsList = objectMapper.readValue(lintingErrors, new TypeReference<>() {
+            });
+            if (lintingErrorsList.isEmpty()) {
+                return Response.withData(null);
+            } else {
+                return Response.withData(lintingErrorsList);
+            }
+        } catch (HttpClientErrorException e) {
+            return Response.withError(new Error<>(e.getStatusCode().value(), e.getResponseBodyAsString()));
+        } catch (JsonProcessingException e) {
+            return Response.withError(new Error<>(500, e.getMessage()));
         }
     }
 }
