@@ -30,17 +30,8 @@ public class Snippet {
     @Column(nullable = false)
     private String version;
 
-    @Lob
-    @Column(nullable = false)
-    private byte[] snippet;
-
     @OneToMany(mappedBy = "snippet", cascade = CascadeType.ALL)
     private List<Test> tests;
-
-    public boolean isValid() {
-        return title != null && !title.isEmpty() && language != null && !language.isEmpty() && version != null
-                && !version.isEmpty() && snippet != null && snippet.length > 0;
-    }
 
     public List<String> getInvalidFields() {
         List<String> invalidFields = new ArrayList<>();
@@ -52,9 +43,6 @@ public class Snippet {
         }
         if (version == null || version.isEmpty()) {
             invalidFields.add("version");
-        }
-        if (snippet == null || snippet.length == 0) {
-            invalidFields.add("snippet");
         }
         return invalidFields;
     }
