@@ -3,6 +3,7 @@ package com.printScript.snippetService.services;
 import static com.printScript.snippetService.utils.Utils.*;
 
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -254,4 +255,53 @@ public class SnippetService {
             return Response.withError(new Error<>(e.getStatusCode().value(), e.getResponseBodyAsString()));
         }
     }
+
+    public Response<List<SnippetDetails>> getAccessibleSnippets(String userId, String token, String relation, String nameFilter, String languageFilter, Boolean isValid, String sortBy) {
+        try {
+            List<Snippet> snippets = snippetRepository.findAll(); // Fetch all snippets
+            List<SnippetDetails> accessibleSnippets = new ArrayList<>();
+
+            for (Snippet snippet : snippets) {
+                Response<String> permissionsResponse = checkPermissions(snippet.getId(), userId, token);
+                if (permissionsResponse.isError()) continue;
+
+                boolean isAuthor = snippet.getUserId().equals(userId);
+                boolean isShared = !isAuthor;
+
+                if ((relation.equals("author") && !isAuthor) || (relation.equals("shared") && !isShared)) continue;
+
+                boolean matchesName = nameFilter == null || snippet.getTitle().contains(nameFilter);
+                boolean matchesLanguage = languageFilter == null || snippet.getLanguage().equals(languageFilter);
+                boolean matchesValidity = isValid == null || validateCode(new String(snippet.getSnippet(), StandardCharsets.UTF_8), snippet.getVersion()).isError() != isValid;
+
+                if (matchesName && matchesLanguage && matchesValidity) {
+                    SnippetDetails details = new SnippetDetails(snippet.getTitle(), snippet.getDescription(), snippet.getLanguage(), snippet.getVersion(), new String(snippet.getSnippet(), StandardCharsets.UTF_8));
+                    accessibleSnippets.add(details);
+                }
+            }
+
+            // Sort the list based on the sortBy parameter
+            if (sortBy != null) {
+                accessibleSnippets.sort((s1, s2) -> {
+                    switch (sortBy) {
+                        case "name":
+                            return s1.title().compareTo(s2.title());
+                        case "language":
+                            return s1.language().compareTo(s2.language());
+                        case "validity":
+                            return Boolean.compare(validateCode(s1.content(), s1.version()).isError(), validateCode(s2.content(), s2.version()).isError());
+                        default:
+                            return 0;
+                    }
+                });
+            }
+
+            return Response.withData(accessibleSnippets);
+        } catch (Exception e) {
+            return Response.withError(new Error<>(500, e.getMessage()));
+        }
+    }
+
+
+
 }
