@@ -2,9 +2,8 @@ package com.printScript.snippetService.controllers;
 
 import static com.printScript.snippetService.utils.Utils.checkMediaType;
 
-import java.util.Map;
-
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -31,14 +30,21 @@ public class SnippetController {
     }
 
     @PostMapping("/save/file")
-    public ResponseEntity<Object> saveSnippetFile(@RequestParam MultipartFile file,
-            @RequestParam SnippetInfoDTO snippetInfoDTO, @RequestHeader("Authorization") String token) {
+    public ResponseEntity<Object> saveSnippetFile(@RequestParam MultipartFile file, @RequestParam String userId,
+            @RequestParam String title, @RequestParam String description, @RequestParam String language,
+            @RequestParam String version, @RequestHeader("Authorization") String token) {
         ResponseEntity<Object> mediaTypeCheck = checkMediaType(file.getContentType());
         if (mediaTypeCheck != null) {
             return mediaTypeCheck;
         }
-
-        Response<String> response = snippetService.saveSnippetFile(file, snippetInfoDTO, token);
+        String code;
+        try {
+            code = new String(file.getBytes());
+        } catch (Exception e) {
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+        SnippetDTO snippetDTO = new SnippetDTO(code, userId, title, description, language, version);
+        Response<String> response = snippetService.saveSnippet(snippetDTO, token);
         if (response.isError()) {
             return new ResponseEntity<>(response.getError().body(), HttpStatusCode.valueOf(response.getError().code()));
         }
@@ -56,14 +62,23 @@ public class SnippetController {
     }
 
     @PostMapping("/update/file")
-    public ResponseEntity<Object> updateSnippetFile(@RequestPart MultipartFile file,
-            @RequestPart UpdateSnippetInfoDTO updateSnippetInfoDTO, @RequestHeader("Authorization") String token) {
+    public ResponseEntity<Object> updateSnippetFile(@RequestParam MultipartFile file, @RequestParam String userId,
+            @RequestParam String snippetId, @RequestParam String title, @RequestParam String description,
+            @RequestParam String language, @RequestParam String version, @RequestHeader("Authorization") String token) {
         ResponseEntity<Object> mediaTypeCheck = checkMediaType(file.getContentType());
         if (mediaTypeCheck != null) {
             return mediaTypeCheck;
         }
 
-        Response<String> response = snippetService.updateSnippetFile(file, updateSnippetInfoDTO, token);
+        String code;
+        try {
+            code = new String(file.getBytes());
+        } catch (Exception e) {
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+        UpdateSnippetDTO updateSnippetDTO = new UpdateSnippetDTO(code, userId, snippetId, title, description, language,
+                version);
+        Response<String> response = snippetService.updateSnippet(updateSnippetDTO, token);
         if (response.isError()) {
             return new ResponseEntity<>(response.getError().body(), HttpStatusCode.valueOf(response.getError().code()));
         }
@@ -71,12 +86,9 @@ public class SnippetController {
     }
 
     @GetMapping("/details")
-    public ResponseEntity<Object> getSnippetDetails(@RequestBody Map<String, String> body,
-            @RequestHeader("Authorization") String token) {
-        String snippetId = body.get("snippetId");
-        String userId = body.get("userId");
-
-        Response<SnippetDetails> response = snippetService.getSnippetDetails(snippetId, userId, token);
+    public ResponseEntity<Object> getSnippetDetails(@RequestParam String snippetId, @RequestParam String userId,
+            @RequestParam("configFile") MultipartFile configFile, @RequestHeader("Authorization") String token) {
+        Response<SnippetDetails> response = snippetService.getSnippetDetails(snippetId, userId, token, configFile);
         if (response.isError()) {
             return new ResponseEntity<>(response.getError().body(), HttpStatusCode.valueOf(response.getError().code()));
         }
