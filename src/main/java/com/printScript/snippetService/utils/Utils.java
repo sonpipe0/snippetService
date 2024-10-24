@@ -1,6 +1,7 @@
 package com.printScript.snippetService.utils;
 
 import java.io.IOException;
+import java.util.Map;
 
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.*;
@@ -72,8 +73,17 @@ public class Utils {
         return webClient.postForEntity(url, request, responseType).getBody();
     }
 
-    public static <T> T getRequest(RestTemplate webClient, String path, HttpEntity<?> request, Class<T> responseType) {
+    public static <T> T getRequest(RestTemplate webClient, String path, HttpEntity<?> request, Class<T> responseType,
+            Map<String, String> params) {
+        String urlTemplate = UriComponentsBuilder.fromHttpUrl(createUrl(webClient, path))
+                .queryParam("snippetId", "{snippetId}").queryParam("userId", "{userId}").encode().toUriString();
+
+        ResponseEntity<T> response = webClient.exchange(urlTemplate, HttpMethod.GET, request, responseType, params);
+        return response.getBody();
+    }
+
+    public static void putRequest(RestTemplate webClient, String path, HttpEntity<?> request) {
         String url = createUrl(webClient, path);
-        return webClient.getForEntity(url, responseType, request).getBody();
+        webClient.put(url, request);
     }
 }
