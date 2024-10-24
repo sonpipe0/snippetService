@@ -85,13 +85,11 @@ public class SnippetController {
 
     @PostMapping("/share")
     public ResponseEntity<Object> shareSnippet(@RequestParam String userId,
-                                               @RequestBody ShareSnippetDTO shareSnippetDTO,
-                                               @RequestHeader("Authorization") String token) {
+            @RequestBody ShareSnippetDTO shareSnippetDTO, @RequestHeader("Authorization") String token) {
         Response<String> response = snippetService.shareSnippet(userId, shareSnippetDTO, token);
         if (response.isError()) {
             return new ResponseEntity<>(response.getError().body(), HttpStatusCode.valueOf(response.getError().code()));
         }
         return ResponseEntity.ok("Snippet shared successfully");
     }
-
 }

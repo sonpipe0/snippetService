@@ -110,7 +110,8 @@ public class SnippetService {
 
             String snippetId = snippet.getId();
 
-            Response<String> permissionsResponse = saveRelation(token, userId, snippetId, "/snippets/save/relationship");
+            Response<String> permissionsResponse = saveRelation(token, userId, snippetId,
+                    "/snippets/save/relationship");
             if (permissionsResponse.isError()) {
                 TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
                 return permissionsResponse;
@@ -144,7 +145,7 @@ public class SnippetService {
             return Response.withError(new Error<>(404, "Snippet not found"));
         }
 
-        Response<String> permissionsResponse = checkPermissions(snippetId, userId, token);
+        Response<String> permissionsResponse = checkPermissions(snippetId, userId, token, "/snippets/canEdit");
         if (permissionsResponse.isError())
             return permissionsResponse;
 
@@ -175,7 +176,7 @@ public class SnippetService {
                 return Response.withError(new Error<>(404, "Snippet not found"));
             }
 
-            Response<String> permissionsResponse = checkPermissions(snippetId, userId, token);
+            Response<String> permissionsResponse = checkPermissions(snippetId, userId, token, "/snippets/canEdit");
             if (permissionsResponse.isError())
                 return permissionsResponse;
 
@@ -207,7 +208,7 @@ public class SnippetService {
             return Response.withError(new Error<>(404, "Snippet not found"));
         }
 
-        Response<String> permissionsResponse = checkPermissions(snippetId, userId, token);
+        Response<String> permissionsResponse = checkPermissions(snippetId, userId, token, "/snippets/hasAccess");
         if (permissionsResponse.isError())
             return Response.withError(permissionsResponse.getError());
 
@@ -224,12 +225,14 @@ public class SnippetService {
     }
 
     public Response<String> shareSnippet(String userId, ShareSnippetDTO shareSnippetDTO, String token) {
-        Response<String> permissionsResponse = checkPermissions(shareSnippetDTO.getSnippetId(), userId, token);
+        String snippetId = shareSnippetDTO.getSnippetId();
+
+        Response<String> permissionsResponse = checkPermissions(snippetId, userId, token, "/snippets/hasAccess");
         if (permissionsResponse.isError())
             return permissionsResponse;
 
-        Response<String> permissionsResponse2 = saveRelation(token, shareSnippetDTO.getToUserId(),
-                shareSnippetDTO.getSnippetId(), "/snippets/save/share/relationship");
+        Response<String> permissionsResponse2 = saveRelation(token, shareSnippetDTO.getToUserId(), snippetId,
+                "/snippets/save/share/relationship");
         if (permissionsResponse2.isError()) {
             return permissionsResponse2;
         }
@@ -247,11 +250,10 @@ public class SnippetService {
         }
     }
 
-    private Response<String> checkPermissions(String snippetId, String userId, String token) {
+    private Response<String> checkPermissions(String snippetId, String userId, String token, String path) {
         HttpEntity<Void> requestPermissions = createGetPermissionsRequest(token);
         Map<String, String> params = Map.of("snippetId", snippetId, "userId", userId);
         try {
-            String path = "/snippets/hasAccess";
             getRequest(permissionsWebClient, path, requestPermissions, Void.class, params);
             return Response.withData(null);
         } catch (HttpClientErrorException e) {
