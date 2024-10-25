@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1
 FROM gradle:8.10.1-jdk21 AS builder
 
 COPY . /home/gradle/src

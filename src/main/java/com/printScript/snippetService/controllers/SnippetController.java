@@ -2,8 +2,8 @@ package com.printScript.snippetService.controllers;
 
 import static com.printScript.snippetService.utils.Utils.checkMediaType;
 
-import java.util.Map;
 import java.util.logging.Logger;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
@@ -114,7 +114,8 @@ public class SnippetController {
             logger.severe("Error while posting to v1 stream ciclon: " + e.getMessage());
             return new ResponseEntity<>(e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
-      
+    }
+
     @PostMapping("/share")
     public ResponseEntity<Object> shareSnippet(@RequestParam String userId,
             @RequestBody ShareSnippetDTO shareSnippetDTO, @RequestHeader("Authorization") String token) {

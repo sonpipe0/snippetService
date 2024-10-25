@@ -238,6 +238,7 @@ public class SnippetService {
     public void postToCyclon() {
         lintProducer.publishEvent("ciclon");
     }
+
     private Response<List<ErrorMessage>> getLintingErrors(String code, String version, InputStream config) {
         HttpEntity<Linting> requestPrintScript = createLintPrintScriptRequest(code, version, config);
         try {
