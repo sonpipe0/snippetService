@@ -22,6 +22,7 @@ import com.printScript.snippetService.DTO.*;
 import com.printScript.snippetService.entities.Snippet;
 import com.printScript.snippetService.errorDTO.Error;
 import com.printScript.snippetService.errorDTO.ErrorMessage;
+import com.printScript.snippetService.redis.LintProducerInterface;
 import com.printScript.snippetService.repositories.SnippetRepository;
 import com.printScript.snippetService.web.BucketRequestExecutor;
 
@@ -39,13 +40,15 @@ public class SnippetService {
     private final RestTemplate permissionsWebClient;
     private final RestTemplate printScriptWebClient;
     private final ObjectMapper objectMapper;
+    private final LintProducerInterface lintProducer;
 
     @Autowired
     public SnippetService(RestTemplateService permissionsRestTemplate, RestTemplateService printScriptRestTemplate,
-            ObjectMapper objectMapper) {
+            ObjectMapper objectMapper, LintProducerInterface lintProducer) {
         this.permissionsWebClient = permissionsRestTemplate.getRestTemplate();
         this.printScriptWebClient = printScriptRestTemplate.getRestTemplate();
         this.objectMapper = objectMapper;
+        this.lintProducer = lintProducer;
     }
 
     @Transactional
@@ -232,6 +235,9 @@ public class SnippetService {
         }
     }
 
+    public void postToCyclon() {
+        lintProducer.publishEvent("ciclon");
+    }
     private Response<List<ErrorMessage>> getLintingErrors(String code, String version, InputStream config) {
         HttpEntity<Linting> requestPrintScript = createLintPrintScriptRequest(code, version, config);
         try {

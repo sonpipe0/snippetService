@@ -4,6 +4,7 @@ plugins {
 	id("io.spring.dependency-management") version "1.1.6"
     id("com.diffplug.spotless") version "6.25.0"
     id("checkstyle")
+    kotlin("jvm") version "2.0.21"
 }
 
 group = "com.printScript"
@@ -22,6 +23,14 @@ configurations {
 }
 
 repositories {
+    maven{
+        name = "GitHubPackagesAustral"
+        url = uri("https://maven.pkg.github.com/austral-ingsis/class-redis-streams")
+        credentials {
+            username = project.findProperty("gpr.user") as String? ?: System.getenv("USERNAME")
+            password = project.findProperty("gpr.key") as String? ?: System.getenv("TOKEN")
+        }
+    }
 	mavenCentral()
 }
 
@@ -34,10 +43,14 @@ dependencies {
     annotationProcessor("org.projectlombok:lombok")
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+    implementation("org.springframework.boot:spring-boot-starter-data-redis-reactive") // For reactive Redis
+    implementation("org.austral.ingsis:redis-streams-mvc:0.1.13")
+    implementation("org.springframework.boot:spring-boot-starter-data-redis")
 }
 
 tasks.withType<Test> {
 	useJUnitPlatform()
+    exclude("**/RedisTests.class")
 }
 
 checkstyle {

@@ -2,6 +2,8 @@ package com.printScript.snippetService.controllers;
 
 import static com.printScript.snippetService.utils.Utils.checkMediaType;
 
+import java.util.Map;
+import java.util.logging.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
@@ -10,14 +12,21 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.printScript.snippetService.DTO.*;
+import com.printScript.snippetService.redis.LintProducerInterface;
 import com.printScript.snippetService.services.SnippetService;
 
 @RestController
 @RequestMapping("/snippet")
 public class SnippetController {
 
+    private static final Logger logger = Logger.getLogger(SnippetController.class.getName());
+
+    private final SnippetService snippetService;
+
     @Autowired
-    SnippetService snippetService;
+    public SnippetController(SnippetService snippetService, LintProducerInterface lintProducer) {
+        this.snippetService = snippetService;
+    }
 
     @PostMapping("/save")
     public ResponseEntity<Object> saveSnippet(@RequestBody SnippetDTO snippetDTO,
@@ -95,6 +104,17 @@ public class SnippetController {
         return ResponseEntity.ok(response.getData());
     }
 
+    @PostMapping("/redis")
+    public ResponseEntity<Object> postToV1StreamCiclon() {
+        logger.info("Received request to post to v1 stream ciclon");
+        try {
+            snippetService.postToCyclon();
+            return ResponseEntity.ok("Event produced successfully");
+        } catch (Exception e) {
+            logger.severe("Error while posting to v1 stream ciclon: " + e.getMessage());
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+      
     @PostMapping("/share")
     public ResponseEntity<Object> shareSnippet(@RequestParam String userId,
             @RequestBody ShareSnippetDTO shareSnippetDTO, @RequestHeader("Authorization") String token) {
