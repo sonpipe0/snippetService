@@ -24,4 +24,12 @@ public class RestTemplateConfig {
         restTemplateService.permissionsRestTemplate(builder);
         return restTemplateService;
     }
+
+    @Bean
+    public RestTemplateService bucketRestTemplate() {
+        RestTemplateBuilder builder = new RestTemplateBuilder();
+        RestTemplateService restTemplateService = new RestTemplateService(builder);
+        restTemplateService.bucketRestTemplate(builder);
+        return restTemplateService;
+    }
 }

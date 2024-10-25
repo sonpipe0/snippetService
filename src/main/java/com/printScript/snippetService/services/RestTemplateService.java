@@ -10,10 +10,12 @@ public class RestTemplateService {
 
     private final String permissionsUrl;
     private final String printScriptUrl;
+    private final String bucketUrl;
 
     public RestTemplateService(RestTemplateBuilder restTemplateBuilder) {
         this.permissionsUrl = System.getenv("PERMISSIONS_SERVICE_URL");
         this.printScriptUrl = System.getenv("PRINT_SCRIPT_SERVICE_URL");
+        this.bucketUrl = System.getenv("BUCKET_SERVICE_URL");
         this.restTemplate = restTemplateBuilder.build(); // Build a default RestTemplate
     }
 
@@ -24,6 +26,11 @@ public class RestTemplateService {
 
     public RestTemplateService printScriptRestTemplate(RestTemplateBuilder restTemplateBuilder) {
         this.restTemplate = restTemplateBuilder.rootUri(printScriptUrl).build();
+        return this;
+    }
+
+    public RestTemplateService bucketRestTemplate(RestTemplateBuilder restTemplateBuilder) {
+        this.restTemplate = restTemplateBuilder.rootUri(bucketUrl).build();
         return this;
     }
 
