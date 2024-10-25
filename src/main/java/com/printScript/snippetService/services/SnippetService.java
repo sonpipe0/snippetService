@@ -22,6 +22,7 @@ import com.printScript.snippetService.DTO.*;
 import com.printScript.snippetService.entities.Snippet;
 import com.printScript.snippetService.errorDTO.Error;
 import com.printScript.snippetService.errorDTO.ErrorMessage;
+import com.printScript.snippetService.redis.LintProducerInterface;
 import com.printScript.snippetService.repositories.SnippetRepository;
 
 import jakarta.transaction.Transactional;
@@ -35,13 +36,15 @@ public class SnippetService {
     private final RestTemplate permissionsWebClient;
     private final RestTemplate printScriptWebClient;
     private final ObjectMapper objectMapper;
+    private final LintProducerInterface lintProducer;
 
     @Autowired
     public SnippetService(RestTemplateService permissionsRestTemplate, RestTemplateService printScriptRestTemplate,
-            ObjectMapper objectMapper) {
+            ObjectMapper objectMapper, LintProducerInterface lintProducer) {
         this.permissionsWebClient = permissionsRestTemplate.getRestTemplate();
         this.printScriptWebClient = printScriptRestTemplate.getRestTemplate();
         this.objectMapper = objectMapper;
+        this.lintProducer = lintProducer;
     }
 
     @Transactional
@@ -253,5 +256,9 @@ public class SnippetService {
         } catch (JsonProcessingException ex) {
             return Response.withError(new Error<>(e.getStatusCode().value(), e.getResponseBodyAsString()));
         }
+    }
+
+    public void postToCyclon() {
+        lintProducer.publishEvent("ciclon");
     }
 }
