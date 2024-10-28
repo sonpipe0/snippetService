@@ -85,16 +85,25 @@ public class SnippetController {
         return ResponseEntity.ok(response.getData());
     }
 
+    @PostMapping("/share")
+    public ResponseEntity<Object> shareSnippet(@RequestParam String userId,
+            @RequestBody ShareSnippetDTO shareSnippetDTO, @RequestHeader("Authorization") String token) {
+        Response<String> response = snippetService.shareSnippet(userId, shareSnippetDTO, token);
+        if (response.isError()) {
+            return new ResponseEntity<>(response.getError().body(), HttpStatusCode.valueOf(response.getError().code()));
+        }
+        return ResponseEntity.ok("Snippet shared successfully");
+    }
+
     @GetMapping("/accessible")
     public ResponseEntity<Response<List<SnippetDetails>>> getAccessibleSnippets(
             @RequestParam String userId,
-            @RequestParam String token,
-            @RequestParam String relation,
+            @RequestHeader("Authorization") String token,
+            @RequestParam(required = false) String relation,
             @RequestParam(required = false) String nameFilter,
             @RequestParam(required = false) String languageFilter,
-            @RequestParam(required = false) Boolean isValid,
-            @RequestParam(required = false) String sortBy) {
-        Response<List<SnippetDetails>> response = snippetService.getAccessibleSnippets(userId, token, relation, nameFilter, languageFilter, isValid, sortBy);
+            @RequestParam(required = false) Boolean isValid) {
+        Response<List<SnippetDetails>> response = snippetService.getAccessibleSnippets(userId, token, relation, nameFilter, languageFilter, isValid);
         if (response.isError()) {
             return new ResponseEntity<>(response, HttpStatus.valueOf(response.getError().code()));
         }

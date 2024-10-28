@@ -5,6 +5,7 @@ import static com.printScript.snippetService.utils.Utils.*;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,6 +25,7 @@ import com.printScript.snippetService.entities.Snippet;
 import com.printScript.snippetService.errorDTO.Error;
 import com.printScript.snippetService.errorDTO.ErrorMessage;
 import com.printScript.snippetService.repositories.SnippetRepository;
+import com.printScript.snippetService.web.BucketRequestExecutor;
 
 import jakarta.transaction.Transactional;
 
@@ -33,15 +35,20 @@ public class SnippetService {
     @Autowired
     private SnippetRepository snippetRepository;
 
+    @Autowired
+    private BucketRequestExecutor bucketRequestExecutor;
+
     private final RestTemplate permissionsWebClient;
     private final RestTemplate printScriptWebClient;
+    private final RestTemplate bucketWebClient;
     private final ObjectMapper objectMapper;
 
     @Autowired
     public SnippetService(RestTemplateService permissionsRestTemplate, RestTemplateService printScriptRestTemplate,
-            ObjectMapper objectMapper) {
+            RestTemplateService bucketRestTemplate, ObjectMapper objectMapper) {
         this.permissionsWebClient = permissionsRestTemplate.getRestTemplate();
         this.printScriptWebClient = printScriptRestTemplate.getRestTemplate();
+        this.bucketWebClient = bucketRestTemplate.getRestTemplate();
         this.objectMapper = objectMapper;
     }
 
@@ -52,14 +59,13 @@ public class SnippetService {
         String version = snippetDTO.getVersion();
 
         Snippet snippet = new Snippet();
-        snippet.setSnippet(code.getBytes());
         snippet.setTitle(snippetDTO.getTitle());
         snippet.setDescription(snippetDTO.getDescription());
         snippet.setLanguage(snippetDTO.getLanguage());
         snippet.setVersion(version);
 
-        if (!snippet.isValid()) {
-            List<String> invalidFields = snippet.getInvalidFields();
+        List<String> invalidFields = snippet.getInvalidFields();
+        if (!invalidFields.isEmpty()) {
             String message = "Invalid body: " + String.join(", ", invalidFields)
                     + (invalidFields.size() > 1 ? " are required" : " is required");
             return Response.withError(new Error<>(400, message));
@@ -73,15 +79,21 @@ public class SnippetService {
 
         String snippetId = snippet.getId();
 
-        Response<String> permissionsResponse = saveRelation(token, userId, snippetId);
-        if (permissionsResponse.isError())
+        Response<String> permissionsResponse = saveRelation(token, userId, snippetId, "/snippets/save/relationship");
+        if (permissionsResponse.isError()) {
+            TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
             return permissionsResponse;
+        }
 
         Response<String> printScriptResponse = validateCode(code, version);
         if (printScriptResponse.isError()) {
             TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
             return printScriptResponse;
         }
+
+        Response<Void> response = bucketRequestExecutor.put("snippets/" + snippetId, code, token);
+        if (response.isError())
+            return Response.withError(response.getError());
 
         return Response.withData(snippetId);
     }
@@ -93,7 +105,6 @@ public class SnippetService {
             String version = snippetInfoDTO.getVersion();
 
             Snippet snippet = new Snippet();
-            snippet.setSnippet(file.getBytes());
             snippet.setTitle(snippetInfoDTO.getTitle());
             snippet.setDescription(snippetInfoDTO.getDescription());
             snippet.setLanguage(snippetInfoDTO.getLanguage());
@@ -101,15 +112,23 @@ public class SnippetService {
 
             String snippetId = snippet.getId();
 
-            Response<String> permissionsResponse = saveRelation(token, userId, snippetId);
-            if (permissionsResponse.isError())
+            Response<String> permissionsResponse = saveRelation(token, userId, snippetId,
+                    "/snippets/save/relationship");
+            if (permissionsResponse.isError()) {
+                TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
                 return permissionsResponse;
+            }
 
             Response<String> printScriptResponse = validateFileCode(file, version);
             if (printScriptResponse.isError()) {
                 TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
                 return printScriptResponse;
             }
+
+            Response<Void> response = bucketRequestExecutor.put("snippets/" + snippetId, new String(file.getBytes()),
+                    token);
+            if (response.isError())
+                return Response.withError(response.getError());
 
             return Response.withData(snippetId);
         } catch (Exception e) {
@@ -128,7 +147,7 @@ public class SnippetService {
             return Response.withError(new Error<>(404, "Snippet not found"));
         }
 
-        Response<String> permissionsResponse = checkPermissions(snippetId, userId, token);
+        Response<String> permissionsResponse = checkPermissions(snippetId, userId, token, "/snippets/canEdit");
         if (permissionsResponse.isError())
             return permissionsResponse;
 
@@ -137,13 +156,13 @@ public class SnippetService {
             return printScriptResponse;
 
         Snippet snippet = snippetOptional.get();
-        snippet.setSnippet(code.getBytes());
         snippet.setTitle(updateSnippetDTO.getTitle());
         snippet.setDescription(updateSnippetDTO.getDescription());
         snippet.setLanguage(updateSnippetDTO.getLanguage());
         snippet.setVersion(version);
         snippetRepository.save(snippet);
 
+        Response<Void> response = bucketRequestExecutor.put("snippets/" + snippetId, code, token);
         return Response.withData("Snippet updated successfully");
     }
 
@@ -159,7 +178,7 @@ public class SnippetService {
                 return Response.withError(new Error<>(404, "Snippet not found"));
             }
 
-            Response<String> permissionsResponse = checkPermissions(snippetId, userId, token);
+            Response<String> permissionsResponse = checkPermissions(snippetId, userId, token, "/snippets/canEdit");
             if (permissionsResponse.isError())
                 return permissionsResponse;
 
@@ -168,12 +187,16 @@ public class SnippetService {
                 return printScriptResponse;
 
             Snippet snippet = snippetOptional.get();
-            snippet.setSnippet(file.getBytes());
             snippet.setTitle(updateSnippetInfoDTO.getTitle());
             snippet.setDescription(updateSnippetInfoDTO.getDescription());
             snippet.setLanguage(updateSnippetInfoDTO.getLanguage());
             snippet.setVersion(version);
             snippetRepository.save(snippet);
+
+            Response<Void> response = bucketRequestExecutor.put("snippets/" + snippetId, new String(file.getBytes()),
+                    token);
+            if (response.isError())
+                return Response.withError(response.getError());
 
             return Response.withData("Snippet updated successfully");
         } catch (Exception e) {
@@ -187,34 +210,53 @@ public class SnippetService {
             return Response.withError(new Error<>(404, "Snippet not found"));
         }
 
-        Response<String> permissionsResponse = checkPermissions(snippetId, userId, token);
+        Response<String> permissionsResponse = checkPermissions(snippetId, userId, token, "/snippets/hasAccess");
         if (permissionsResponse.isError())
             return Response.withError(permissionsResponse.getError());
 
         Snippet snippet = snippetOpt.get();
 
+        Response<String> code = bucketRequestExecutor.get("snippets/" + snippetId, token);
+        if (code.isError())
+            return Response.withError(code.getError());
+
         SnippetDetails snippetDetails = new SnippetDetails(snippet.getTitle(), snippet.getDescription(),
-                snippet.getLanguage(), snippet.getVersion(), new String(snippet.getSnippet(), StandardCharsets.UTF_8));
+                snippet.getLanguage(), snippet.getVersion(), code.getData());
 
         return Response.withData(snippetDetails);
     }
 
-    private Response<String> saveRelation(String token, String userId, String snippetId) {
+    public Response<String> shareSnippet(String userId, ShareSnippetDTO shareSnippetDTO, String token) {
+        String snippetId = shareSnippetDTO.getSnippetId();
+
+        Response<String> permissionsResponse = checkPermissions(snippetId, userId, token, "/snippets/hasAccess");
+        if (permissionsResponse.isError())
+            return permissionsResponse;
+
+        Response<String> permissionsResponse2 = saveRelation(token, shareSnippetDTO.getToUserId(), snippetId,
+                "/snippets/save/share/relationship");
+        if (permissionsResponse2.isError()) {
+            return permissionsResponse2;
+        }
+
+        return Response.withData("Snippet shared successfully");
+    }
+
+    private Response<String> saveRelation(String token, String userId, String snippetId, String path) {
         HttpEntity<Permissions> requestPermissions = createPostPermissionsRequest(userId, snippetId, token);
         try {
-            postRequest(permissionsWebClient, "/snippets/save/relationship", requestPermissions, Void.class);
+            postRequest(permissionsWebClient, path, requestPermissions, Void.class);
             return Response.withData(null);
         } catch (HttpClientErrorException e) {
-            TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
             return Response.withError(new Error<>(e.getStatusCode().value(), e.getResponseBodyAsString()));
         }
     }
 
-    private Response<String> checkPermissions(String snippetId, String userId, String token) {
+    private Response<String> checkPermissions(String snippetId, String userId, String token, String path) {
         HttpEntity<Void> requestPermissions = createGetPermissionsRequest(token);
+        Map<String, String> params = Map.of("snippetId", snippetId, "userId", userId);
         try {
-            String path = "/snippets/hasAccess?snippetId=" + snippetId + "&userId=" + userId;
-            getRequest(permissionsWebClient, path, requestPermissions, Void.class);
+            getRequest(permissionsWebClient, path, requestPermissions, Void.class, params);
             return Response.withData(null);
         } catch (HttpClientErrorException e) {
             return Response.withError(new Error<>(e.getStatusCode().value(), e.getResponseBodyAsString()));
@@ -248,7 +290,7 @@ public class SnippetService {
     private Response<String> getValidationErrors(HttpClientErrorException e) {
         try {
             List<ErrorMessage> errorMessages = objectMapper.readValue(e.getResponseBodyAsString(),
-                    new TypeReference<List<ErrorMessage>>() {
+                    new TypeReference<>() {
                     });
             return Response.withError(new Error<>(e.getStatusCode().value(), errorMessages));
         } catch (JsonProcessingException ex) {
@@ -256,52 +298,58 @@ public class SnippetService {
         }
     }
 
-    public Response<List<SnippetDetails>> getAccessibleSnippets(String userId, String token, String relation, String nameFilter, String languageFilter, Boolean isValid, String sortBy) {
+    private Response<Map<String, String>> getSnippetRelationships(String userId, String token) {
+        HttpEntity<Void> requestPermissions = createGetPermissionsRequest(token);
+        Map<String, String> params = Map.of("userId", userId);
         try {
-            List<Snippet> snippets = snippetRepository.findAll(); // Fetch all snippets
-            List<SnippetDetails> accessibleSnippets = new ArrayList<>();
-
-            for (Snippet snippet : snippets) {
-                Response<String> permissionsResponse = checkPermissions(snippet.getId(), userId, token);
-                if (permissionsResponse.isError()) continue;
-
-                boolean isAuthor = snippet.getUserId().equals(userId);
-                boolean isShared = !isAuthor;
-
-                if ((relation.equals("author") && !isAuthor) || (relation.equals("shared") && !isShared)) continue;
-
-                boolean matchesName = nameFilter == null || snippet.getTitle().contains(nameFilter);
-                boolean matchesLanguage = languageFilter == null || snippet.getLanguage().equals(languageFilter);
-                boolean matchesValidity = isValid == null || validateCode(new String(snippet.getSnippet(), StandardCharsets.UTF_8), snippet.getVersion()).isError() != isValid;
-
-                if (matchesName && matchesLanguage && matchesValidity) {
-                    SnippetDetails details = new SnippetDetails(snippet.getTitle(), snippet.getDescription(), snippet.getLanguage(), snippet.getVersion(), new String(snippet.getSnippet(), StandardCharsets.UTF_8));
-                    accessibleSnippets.add(details);
-                }
-            }
-
-            // Sort the list based on the sortBy parameter
-            if (sortBy != null) {
-                accessibleSnippets.sort((s1, s2) -> {
-                    switch (sortBy) {
-                        case "name":
-                            return s1.title().compareTo(s2.title());
-                        case "language":
-                            return s1.language().compareTo(s2.language());
-                        case "validity":
-                            return Boolean.compare(validateCode(s1.content(), s1.version()).isError(), validateCode(s2.content(), s2.version()).isError());
-                        default:
-                            return 0;
-                    }
-                });
-            }
-
-            return Response.withData(accessibleSnippets);
-        } catch (Exception e) {
-            return Response.withError(new Error<>(500, e.getMessage()));
+            getRequest(permissionsWebClient, "/snippets/get/relationships", requestPermissions, Void.class, params);
+            return Response.withData(null);
+        } catch (HttpClientErrorException e) {
+            return Response.withError(new Error<>(e.getStatusCode().value(), e.getResponseBodyAsString()));
         }
     }
 
+    public Response<List<SnippetDetails>> getAccessibleSnippets(String userId, String token, String relation, String nameFilter, String languageFilter, Boolean isValid) {
+        Response<Map<String, String>> relationshipsResponse = getSnippetRelationships(userId, token);
+        if (relationshipsResponse.isError()) {
+            return Response.withError(relationshipsResponse.getError());
+        }
 
+        Map<String, String> relationships = relationshipsResponse.getData();
+        List<SnippetDetails> accessibleSnippets = new ArrayList<>();
+
+        for (Map.Entry<String, String> entry : relationships.entrySet()) {
+            String snippetId = entry.getKey();
+            String snippetRelation = entry.getValue();
+
+            if (relation != null && !relation.equals(snippetRelation)) {
+                continue;
+            }
+
+            Optional<Snippet> snippetOpt = snippetRepository.findById(snippetId);
+            if (snippetOpt.isEmpty()) {
+                continue;
+            }
+
+            Snippet snippet = snippetOpt.get();
+            if (nameFilter != null && !snippet.getTitle().contains(nameFilter)) {
+                continue;
+            }
+
+            if (languageFilter != null && !snippet.getLanguage().equals(languageFilter)) {
+                continue;
+            }
+
+            Response<String> codeResponse = bucketRequestExecutor.get("snippets/" + snippetId, token);
+            if (codeResponse.isError()) {
+                continue;
+            }
+
+            SnippetDetails snippetDetails = new SnippetDetails(snippet.getTitle(), snippet.getDescription(), snippet.getLanguage(), snippet.getVersion(), codeResponse.getData());
+            accessibleSnippets.add(snippetDetails);
+        }
+
+        return Response.withData(accessibleSnippets);
+    }
 
 }
