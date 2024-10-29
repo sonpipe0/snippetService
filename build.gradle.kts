@@ -35,10 +35,16 @@ repositories {
 }
 
 dependencies {
+    implementation("com.auth0:java-jwt:4.4.0")
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
     implementation("org.springframework.boot:spring-boot-starter-web")
     implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.6.0")
+    implementation("org.springframework.boot:spring-boot-starter-security")
+    implementation("org.hibernate.validator:hibernate-validator:6.0.13.Final")
+    implementation("org.glassfish:javax.el:3.0.0")
+    implementation("org.springframework.boot:spring-boot-starter-oauth2-resource-server")
     compileOnly("org.projectlombok:lombok")
+    implementation("javax.validation:validation-api:2.0.1.Final")
     runtimeOnly("org.postgresql:postgresql")
     annotationProcessor("org.projectlombok:lombok")
     testImplementation("org.springframework.boot:spring-boot-starter-test")

@@ -8,7 +8,6 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import com.printScript.snippetService.DTO.Linting;
-import com.printScript.snippetService.DTO.Permissions;
 import com.printScript.snippetService.DTO.Response;
 import com.printScript.snippetService.DTO.Validation;
 import com.printScript.snippetService.errorDTO.Error;
@@ -34,27 +33,25 @@ public class Utils {
         return null;
     }
 
-    public static HttpEntity<Permissions> createPostPermissionsRequest(String userId, String snippetId, String token) {
-        Permissions permissions = new Permissions(userId, snippetId);
-        HttpHeaders headers = new HttpHeaders();
-        headers.set("Authorization", token);
-        return new HttpEntity<>(permissions, headers);
-    }
-
     public static HttpEntity<Void> createGetPermissionsRequest(String token) {
         HttpHeaders headers = new HttpHeaders();
         headers.set("Authorization", token);
         return new HttpEntity<>(headers);
     }
 
-    public static HttpEntity<Validation> createValidatePrintScriptRequest(String code, String version) {
+    public static HttpEntity<Validation> createValidatePrintScriptRequest(String code, String version, String token) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("Authorization", token);
         Validation validation = new Validation(code, version);
-        return new HttpEntity<>(validation);
+        return new HttpEntity<>(validation, headers);
     }
 
-    public static HttpEntity<Linting> createLintPrintScriptRequest(String code, String version, InputStream config) {
+    public static HttpEntity<Linting> createLintPrintScriptRequest(String code, String version, InputStream config,
+            String token) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("Authorization", token);
         Linting linting = new Linting(code, version, config);
-        return new HttpEntity<>(linting);
+        return new HttpEntity<>(linting, headers);
     }
 
     public static String createUrl(RestTemplate printScriptWebClient, String path) {

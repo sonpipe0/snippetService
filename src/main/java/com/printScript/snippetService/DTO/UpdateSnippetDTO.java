@@ -9,8 +9,6 @@ import lombok.Setter;
 @NoArgsConstructor
 public class UpdateSnippetDTO {
 
-    private String userId;
-
     private String snippetId;
 
     private String title;
@@ -23,9 +21,8 @@ public class UpdateSnippetDTO {
 
     private String code;
 
-    public UpdateSnippetDTO(String code, String userId, String snippetId, String title, String description,
-            String language, String version) {
-        this.userId = userId;
+    public UpdateSnippetDTO(String code, String snippetId, String title, String description, String language,
+            String version) {
         this.snippetId = snippetId;
         this.title = title;
         this.description = description;
