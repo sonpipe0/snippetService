@@ -1,0 +1,18 @@
+#!/bin/sh
+
+echo "running spotlessApply"
+./gradlew spotlessApply
+if [ $? -ne 0 ]; then
+  echo "Spotless apply failed. Aborting commit."
+  exit 1
+fi
+
+echo "running check"
+./gradlew check
+if [ $? -ne 0 ]; then
+  echo "Checks failed. Aborting commit."
+  exit 1
+fi
+
+# Add any changes made by Spotless
+git add .

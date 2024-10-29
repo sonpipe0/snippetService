@@ -38,3 +38,4 @@ out/
 .idea/
 
 .env
+gradle.properties

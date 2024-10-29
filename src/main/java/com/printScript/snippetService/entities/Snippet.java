@@ -1,13 +1,12 @@
 package com.printScript.snippetService.entities;
 
+import java.util.ArrayList;
+import java.util.List;
 
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-
-import java.time.LocalDateTime;
-import java.util.List;
 
 @Table
 @Entity
@@ -19,22 +18,32 @@ public class Snippet {
     @GeneratedValue(strategy = GenerationType.UUID)
     private String id;
 
-    @Column
+    @Column(nullable = false)
     private String title;
 
     @Column
     private String description;
 
-    @Column
+    @Column(nullable = false)
     private String language;
 
-    @Lob
-    @Column
-    private byte[] snippet;
-
-    @Column
-    private LocalDateTime lastAccessed;
+    @Column(nullable = false)
+    private String version;
 
     @OneToMany(mappedBy = "snippet", cascade = CascadeType.ALL)
     private List<Test> tests;
+
+    public List<String> getInvalidFields() {
+        List<String> invalidFields = new ArrayList<>();
+        if (title == null || title.isEmpty()) {
+            invalidFields.add("title");
+        }
+        if (language == null || language.isEmpty()) {
+            invalidFields.add("language");
+        }
+        if (version == null || version.isEmpty()) {
+            invalidFields.add("version");
+        }
+        return invalidFields;
+    }
 }

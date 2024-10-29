@@ -1,7 +1,8 @@
 package com.printScript.snippetService.repositories;
 
-import com.printScript.snippetService.entities.Snippet;
 import org.springframework.data.jpa.repository.JpaRepository;
+
+import com.printScript.snippetService.entities.Snippet;
 
 public interface SnippetRepository extends JpaRepository<Snippet, String> {
 }
