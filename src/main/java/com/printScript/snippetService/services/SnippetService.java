@@ -85,11 +85,6 @@ public class SnippetService {
             return permissionsResponse;
         }
 
-        Response<String> printScriptResponse = validateCode(code, version);
-        if (printScriptResponse.isError()) {
-            TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
-            return printScriptResponse;
-        }
 
         Response<Void> response = bucketRequestExecutor.put("snippets/" + snippetId, code, token);
         if (response.isError())
