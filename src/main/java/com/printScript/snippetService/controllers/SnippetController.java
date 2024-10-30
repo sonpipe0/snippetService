@@ -31,6 +31,7 @@ public class SnippetController {
     @PostMapping("/save")
     public ResponseEntity<Object> saveSnippet(@RequestBody SnippetDTO snippetDTO,
             @RequestHeader("Authorization") String token) {
+
         Response<String> response = snippetService.saveSnippet(snippetDTO, token);
         if (response.isError()) {
             return new ResponseEntity<>(response.getError().body(), HttpStatusCode.valueOf(response.getError().code()));
@@ -39,9 +40,9 @@ public class SnippetController {
     }
 
     @PostMapping("/save/file")
-    public ResponseEntity<Object> saveSnippetFile(@RequestParam MultipartFile file, @RequestParam String userId,
-            @RequestParam String title, @RequestParam String description, @RequestParam String language,
-            @RequestParam String version, @RequestHeader("Authorization") String token) {
+    public ResponseEntity<Object> saveSnippetFile(@RequestParam MultipartFile file, @RequestParam String title,
+            @RequestParam String description, @RequestParam String language, @RequestParam String version,
+            @RequestHeader("Authorization") String token) {
         ResponseEntity<Object> mediaTypeCheck = checkMediaType(file.getContentType());
         if (mediaTypeCheck != null) {
             return mediaTypeCheck;
@@ -52,7 +53,7 @@ public class SnippetController {
         } catch (Exception e) {
             return new ResponseEntity<>(e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
-        SnippetDTO snippetDTO = new SnippetDTO(code, userId, title, description, language, version);
+        SnippetDTO snippetDTO = new SnippetDTO(code, title, description, language, version);
         Response<String> response = snippetService.saveSnippet(snippetDTO, token);
         if (response.isError()) {
             return new ResponseEntity<>(response.getError().body(), HttpStatusCode.valueOf(response.getError().code()));
@@ -85,7 +86,7 @@ public class SnippetController {
         } catch (Exception e) {
             return new ResponseEntity<>(e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
-        UpdateSnippetDTO updateSnippetDTO = new UpdateSnippetDTO(code, userId, snippetId, title, description, language,
+        UpdateSnippetDTO updateSnippetDTO = new UpdateSnippetDTO(code, snippetId, title, description, language,
                 version);
         Response<String> response = snippetService.updateSnippet(updateSnippetDTO, token);
         if (response.isError()) {
@@ -95,9 +96,9 @@ public class SnippetController {
     }
 
     @GetMapping("/details")
-    public ResponseEntity<Object> getSnippetDetails(@RequestParam String snippetId, @RequestParam String userId,
-            @RequestParam("configFile") MultipartFile configFile, @RequestHeader("Authorization") String token) {
-        Response<SnippetDetails> response = snippetService.getSnippetDetails(snippetId, userId, token, configFile);
+    public ResponseEntity<Object> getSnippetDetails(@RequestParam String snippetId,
+            @RequestHeader("Authorization") String token) {
+        Response<SnippetDetails> response = snippetService.getSnippetDetails(snippetId, token);
         if (response.isError()) {
             return new ResponseEntity<>(response.getError().body(), HttpStatusCode.valueOf(response.getError().code()));
         }

@@ -7,8 +7,6 @@ import lombok.*;
 @NoArgsConstructor
 public class SnippetDTO {
 
-    private String userId;
-
     private String title;
 
     private String description;
@@ -19,8 +17,7 @@ public class SnippetDTO {
 
     private String code;
 
-    public SnippetDTO(String code, String userId, String title, String description, String language, String version) {
-        this.userId = userId;
+    public SnippetDTO(String code, String title, String description, String language, String version) {
         this.title = title;
         this.description = description;
         this.language = language;
