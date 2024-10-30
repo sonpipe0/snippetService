@@ -3,7 +3,6 @@ package com.printScript.snippetService.web;
 import static com.printScript.snippetService.utils.Utils.*;
 import static com.printScript.snippetService.utils.Utils.postRequest;
 
-import java.io.InputStream;
 import java.util.List;
 import java.util.Map;
 
@@ -37,23 +36,24 @@ public class SnippetServiceWebHandler {
         this.objectMapper = objectMapper;
     }
 
-    public Response<List<ErrorMessage>> getLintingErrors(String code, String version, String token,
-            InputStream config) {
-        HttpEntity<Linting> requestPrintScript = createLintPrintScriptRequest(code, version, config, token);
+    public Response<Void> getLintingErrors(String code, String version, String language, String token) {
+        LintDTO lintDTO = new LintDTO(code, version);
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("Authorization", token);
+        HttpEntity<LintDTO> requestPrintScript = new HttpEntity<>(lintDTO, headers);
         try {
-            String lintingErrors = getRequest(printScriptWebClient, "/runner/lintingErrors", requestPrintScript,
-                    String.class, Map.of());
-            List<ErrorMessage> lintingErrorsList = objectMapper.readValue(lintingErrors, new TypeReference<>() {
-            });
-            if (lintingErrorsList.isEmpty()) {
-                return Response.withData(null);
-            } else {
-                return Response.withData(lintingErrorsList);
-            }
+            Void lintingErrors = postRequest(printScriptWebClient, "/runner/lintingErrors", requestPrintScript,
+                    Void.class);
+            return Response.withData(null);
         } catch (HttpClientErrorException e) {
-            return Response.withError(new Error<>(e.getStatusCode().value(), e.getResponseBodyAsString()));
-        } catch (JsonProcessingException e) {
-            return Response.withError(new Error<>(500, e.getMessage()));
+            String errors = e.getResponseBodyAsString();
+            try {
+                List<ErrorMessage> errorMessages = objectMapper.readValue(errors, new TypeReference<>() {
+                });
+                return Response.withError(new Error<>(e.getStatusCode().value(), errorMessages));
+            } catch (JsonProcessingException ex) {
+                return Response.withError(new Error<>(500, errors));
+            }
         }
     }
 

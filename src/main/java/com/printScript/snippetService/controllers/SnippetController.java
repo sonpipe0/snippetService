@@ -40,9 +40,9 @@ public class SnippetController {
     }
 
     @PostMapping("/save/file")
-    public ResponseEntity<Object> saveSnippetFile(@RequestParam MultipartFile file, @RequestParam String userId,
-            @RequestParam String title, @RequestParam String description, @RequestParam String language,
-            @RequestParam String version, @RequestHeader("Authorization") String token) {
+    public ResponseEntity<Object> saveSnippetFile(@RequestParam MultipartFile file, @RequestParam String title,
+            @RequestParam String description, @RequestParam String language, @RequestParam String version,
+            @RequestHeader("Authorization") String token) {
         ResponseEntity<Object> mediaTypeCheck = checkMediaType(file.getContentType());
         if (mediaTypeCheck != null) {
             return mediaTypeCheck;
@@ -96,9 +96,9 @@ public class SnippetController {
     }
 
     @GetMapping("/details")
-    public ResponseEntity<Object> getSnippetDetails(@RequestParam String snippetId, @RequestParam String userId,
-            @RequestParam("configFile") MultipartFile configFile, @RequestHeader("Authorization") String token) {
-        Response<SnippetDetails> response = snippetService.getSnippetDetails(snippetId, userId, token, configFile);
+    public ResponseEntity<Object> getSnippetDetails(@RequestParam String snippetId,
+            @RequestHeader("Authorization") String token) {
+        Response<SnippetDetails> response = snippetService.getSnippetDetails(snippetId, token);
         if (response.isError()) {
             return new ResponseEntity<>(response.getError().body(), HttpStatusCode.valueOf(response.getError().code()));
         }

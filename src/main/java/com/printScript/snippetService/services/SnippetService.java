@@ -2,7 +2,6 @@ package com.printScript.snippetService.services;
 
 import static com.printScript.snippetService.utils.Utils.*;
 
-import java.io.InputStream;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -10,7 +9,6 @@ import java.util.Optional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.interceptor.TransactionAspectSupport;
-import org.springframework.web.multipart.MultipartFile;
 
 import com.printScript.snippetService.DTO.*;
 import com.printScript.snippetService.entities.Snippet;
@@ -129,8 +127,7 @@ public class SnippetService {
         return Response.withData("Snippet updated successfully");
     }
 
-    public Response<SnippetDetails> getSnippetDetails(String snippetId, String userId, String token,
-            MultipartFile configFile) {
+    public Response<SnippetDetails> getSnippetDetails(String snippetId, String token) {
         Optional<Snippet> snippetOpt = snippetRepository.findById(snippetId);
         if (snippetOpt.isEmpty()) {
             return Response.withError(new Error<>(404, "Snippet not found"));
@@ -148,20 +145,20 @@ public class SnippetService {
 
         String code = response.getData();
         String version = snippet.getVersion();
-        InputStream config;
-        try {
-            config = configFile.getInputStream();
-        } catch (Exception e) {
-            return Response.withError(new Error<>(500, e.getMessage()));
+        String language = snippet.getLanguage();
+
+        Response<Void> printScriptResponse = webHandler.getLintingErrors(code, version, language, token);
+        List<ErrorMessage> errors = null;
+
+        if (printScriptResponse.getError() != null
+                && printScriptResponse.getError().body() instanceof List<?> errorBody) {
+            if (!errorBody.isEmpty() && errorBody.getFirst() instanceof ErrorMessage) {
+                errors = (List<ErrorMessage>) errorBody;
+            }
         }
 
-        Response<List<ErrorMessage>> printScriptResponse = webHandler.getLintingErrors(code, version, token, config);
-        if (printScriptResponse.isError())
-            return Response.withError(printScriptResponse.getError());
-
         SnippetDetails snippetDetails = new SnippetDetails(snippet.getTitle(), snippet.getDescription(),
-                snippet.getLanguage(), version, code, printScriptResponse.getData());
-
+                snippet.getLanguage(), version, code, errors);
         return Response.withData(snippetDetails);
     }
 

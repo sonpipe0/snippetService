@@ -12,12 +12,11 @@ import lombok.Setter;
 @NoArgsConstructor
 public class LintConfig {
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
     private String id;
 
     @Column(nullable = false)
-    private boolean restrictPrintln = false;
+    private String language;
 
     @Column(nullable = false)
-    private boolean restrictReadInput = false;
+    private String version;
 }

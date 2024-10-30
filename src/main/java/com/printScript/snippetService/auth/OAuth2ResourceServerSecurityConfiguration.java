@@ -35,9 +35,13 @@ public class OAuth2ResourceServerSecurityConfiguration {
         http.authorizeHttpRequests(authorizeRequests -> authorizeRequests.requestMatchers("/").permitAll()
                 .requestMatchers(HttpMethod.GET, "/snippet").hasAuthority("SCOPE_read:snippets")
                 .requestMatchers(HttpMethod.GET, "/snippet/*").hasAuthority("SCOPE_read:snippets")
-                .requestMatchers(HttpMethod.POST, "/snippet").hasAuthority("SCOPE_write:snippets").anyRequest()
-                .authenticated()).oauth2ResourceServer(oauth2 -> oauth2.jwt(withDefaults()))
-                .cors(AbstractHttpConfigurer::disable).csrf(AbstractHttpConfigurer::disable);
+                .requestMatchers(HttpMethod.POST, "/snippet").hasAuthority("SCOPE_write:snippets")
+                .requestMatchers(HttpMethod.GET, "/swagger-ui").permitAll()
+                .requestMatchers(HttpMethod.GET, "/swagger-ui/*").permitAll()
+                .requestMatchers(HttpMethod.GET, "/v3/api-docs").permitAll()
+                .requestMatchers(HttpMethod.GET, "/v3/api-docs/*").permitAll().anyRequest().authenticated())
+                .oauth2ResourceServer(oauth2 -> oauth2.jwt(withDefaults())).cors(AbstractHttpConfigurer::disable)
+                .csrf(AbstractHttpConfigurer::disable);
         return http.build();
     }
 
