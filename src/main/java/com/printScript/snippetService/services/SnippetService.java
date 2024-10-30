@@ -9,23 +9,17 @@ import java.util.Map;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.interceptor.TransactionAspectSupport;
-import org.springframework.util.MultiValueMap;
-import org.springframework.web.client.HttpClientErrorException;
-import org.springframework.web.client.RestTemplate;
-import org.springframework.web.multipart.MultipartFile;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.printScript.snippetService.DTO.*;
 import com.printScript.snippetService.entities.Snippet;
 import com.printScript.snippetService.errorDTO.Error;
 import com.printScript.snippetService.errorDTO.ErrorMessage;
+import com.printScript.snippetService.redis.LintProducerInterface;
 import com.printScript.snippetService.repositories.SnippetRepository;
 import com.printScript.snippetService.web.BucketRequestExecutor;
+import com.printScript.snippetService.web.SnippetServiceWebHandler;
 
 import jakarta.transaction.Transactional;
 
@@ -38,38 +32,34 @@ public class SnippetService {
     @Autowired
     private BucketRequestExecutor bucketRequestExecutor;
 
-    private final RestTemplate permissionsWebClient;
-    private final RestTemplate printScriptWebClient;
-    private final RestTemplate bucketWebClient;
-    private final ObjectMapper objectMapper;
+    @Autowired
+    private SnippetServiceWebHandler webHandler;
+
+    private final LintProducerInterface lintProducer;
 
     @Autowired
-    public SnippetService(RestTemplateService permissionsRestTemplate, RestTemplateService printScriptRestTemplate,
-            RestTemplateService bucketRestTemplate, ObjectMapper objectMapper) {
-        this.permissionsWebClient = permissionsRestTemplate.getRestTemplate();
-        this.printScriptWebClient = printScriptRestTemplate.getRestTemplate();
-        this.bucketWebClient = bucketRestTemplate.getRestTemplate();
-        this.objectMapper = objectMapper;
+    public SnippetService(LintProducerInterface lintProducer) {
+        this.lintProducer = lintProducer;
     }
 
     @Transactional
     public Response<String> saveSnippet(SnippetDTO snippetDTO, String token) {
-        String userId = snippetDTO.getUserId();
-        String code = snippetDTO.getCode();
+        String title = snippetDTO.getTitle();
+        String language = snippetDTO.getLanguage();
         String version = snippetDTO.getVersion();
+        String code = snippetDTO.getCode();
+
+        Response<String> validation = validateRequest(
+                Map.of("title", title, "language", language, "version", version, "code", code));
+        if (validation.isError())
+            return validation;
 
         Snippet snippet = new Snippet();
-        snippet.setTitle(snippetDTO.getTitle());
+        snippet.setTitle(title);
         snippet.setDescription(snippetDTO.getDescription());
-        snippet.setLanguage(snippetDTO.getLanguage());
+        snippet.setLanguage(language);
         snippet.setVersion(version);
 
-        List<String> invalidFields = snippet.getInvalidFields();
-        if (!invalidFields.isEmpty()) {
-            String message = "Invalid body: " + String.join(", ", invalidFields)
-                    + (invalidFields.size() > 1 ? " are required" : " is required");
-            return Response.withError(new Error<>(400, message));
-        }
         try {
             snippetRepository.save(snippet);
         } catch (Exception e) {
@@ -79,12 +69,17 @@ public class SnippetService {
 
         String snippetId = snippet.getId();
 
-        Response<String> permissionsResponse = saveRelation(token, userId, snippetId, "/snippets/save/relationship");
+        Response<String> permissionsResponse = webHandler.saveRelation(token, snippetId, "/snippets/save/relationship");
         if (permissionsResponse.isError()) {
             TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
             return permissionsResponse;
         }
 
+        Response<String> printScriptResponse = webHandler.validateCode(code, version, token);
+        if (printScriptResponse.isError()) {
+            TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
+            return printScriptResponse;
+        }
 
         Response<Void> response = bucketRequestExecutor.put("snippets/" + snippetId, code, token);
         if (response.isError())
@@ -93,142 +88,90 @@ public class SnippetService {
         return Response.withData(snippetId);
     }
 
-    @Transactional
-    public Response<String> saveSnippetFile(MultipartFile file, SnippetInfoDTO snippetInfoDTO, String token) {
-        try {
-            String userId = snippetInfoDTO.getUserId();
-            String version = snippetInfoDTO.getVersion();
-
-            Snippet snippet = new Snippet();
-            snippet.setTitle(snippetInfoDTO.getTitle());
-            snippet.setDescription(snippetInfoDTO.getDescription());
-            snippet.setLanguage(snippetInfoDTO.getLanguage());
-            snippetRepository.save(snippet);
-
-            String snippetId = snippet.getId();
-
-            Response<String> permissionsResponse = saveRelation(token, userId, snippetId,
-                    "/snippets/save/relationship");
-            if (permissionsResponse.isError()) {
-                TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
-                return permissionsResponse;
-            }
-
-            Response<String> printScriptResponse = validateFileCode(file, version);
-            if (printScriptResponse.isError()) {
-                TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
-                return printScriptResponse;
-            }
-
-            Response<Void> response = bucketRequestExecutor.put("snippets/" + snippetId, new String(file.getBytes()),
-                    token);
-            if (response.isError())
-                return Response.withError(response.getError());
-
-            return Response.withData(snippetId);
-        } catch (Exception e) {
-            return Response.withError(new Error<>(500, e.getMessage()));
-        }
-    }
-
     public Response<String> updateSnippet(UpdateSnippetDTO updateSnippetDTO, String token) {
         String snippetId = updateSnippetDTO.getSnippetId();
-        String userId = updateSnippetDTO.getUserId();
-        String code = updateSnippetDTO.getCode();
+        String title = updateSnippetDTO.getTitle();
+        String language = updateSnippetDTO.getLanguage();
         String version = updateSnippetDTO.getVersion();
+        String code = updateSnippetDTO.getCode();
+
+        Response<String> validation = validateRequest(
+                Map.of("snippetId", snippetId, "title", title, "language", language, "version", version, "code", code));
+        if (validation.isError())
+            return validation;
 
         Optional<Snippet> snippetOptional = snippetRepository.findById(snippetId);
         if (snippetOptional.isEmpty()) {
             return Response.withError(new Error<>(404, "Snippet not found"));
         }
 
-        Response<String> permissionsResponse = checkPermissions(snippetId, userId, token, "/snippets/canEdit");
+        Response<String> permissionsResponse = webHandler.checkPermissions(snippetId, token, "/snippets/can-edit");
         if (permissionsResponse.isError())
             return permissionsResponse;
 
-        Response<String> printScriptResponse = validateCode(code, version);
+        Response<String> printScriptResponse = webHandler.validateCode(code, version, token);
         if (printScriptResponse.isError())
             return printScriptResponse;
-
         Snippet snippet = snippetOptional.get();
-        snippet.setTitle(updateSnippetDTO.getTitle());
+        snippet.setTitle(title);
         snippet.setDescription(updateSnippetDTO.getDescription());
-        snippet.setLanguage(updateSnippetDTO.getLanguage());
+        snippet.setLanguage(language);
         snippet.setVersion(version);
-        snippetRepository.save(snippet);
 
-        Response<Void> response = bucketRequestExecutor.put("snippets/" + snippetId, code, token);
+        try {
+            snippetRepository.save(snippet);
+        } catch (Exception e) {
+            TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
+            return Response.withError(new Error<>(500, e.getMessage()));
+        }
+
+        bucketRequestExecutor.put("snippets/" + snippetId, code, token);
         return Response.withData("Snippet updated successfully");
     }
 
-    public Response<String> updateSnippetFile(MultipartFile file, UpdateSnippetInfoDTO updateSnippetInfoDTO,
-            String token) {
-        try {
-            String snippetId = updateSnippetInfoDTO.getSnippetId();
-            String version = updateSnippetInfoDTO.getVersion();
-            String userId = updateSnippetInfoDTO.getUserId();
-
-            Optional<Snippet> snippetOptional = snippetRepository.findById(snippetId);
-            if (snippetOptional.isEmpty()) {
-                return Response.withError(new Error<>(404, "Snippet not found"));
-            }
-
-            Response<String> permissionsResponse = checkPermissions(snippetId, userId, token, "/snippets/canEdit");
-            if (permissionsResponse.isError())
-                return permissionsResponse;
-
-            Response<String> printScriptResponse = validateFileCode(file, version);
-            if (printScriptResponse.isError())
-                return printScriptResponse;
-
-            Snippet snippet = snippetOptional.get();
-            snippet.setTitle(updateSnippetInfoDTO.getTitle());
-            snippet.setDescription(updateSnippetInfoDTO.getDescription());
-            snippet.setLanguage(updateSnippetInfoDTO.getLanguage());
-            snippet.setVersion(version);
-            snippetRepository.save(snippet);
-
-            Response<Void> response = bucketRequestExecutor.put("snippets/" + snippetId, new String(file.getBytes()),
-                    token);
-            if (response.isError())
-                return Response.withError(response.getError());
-
-            return Response.withData("Snippet updated successfully");
-        } catch (Exception e) {
-            return Response.withError(new Error<>(500, e.getMessage()));
-        }
-    }
-
-    public Response<SnippetDetails> getSnippetDetails(String snippetId, String userId, String token) {
+    public Response<SnippetDetails> getSnippetDetails(String snippetId, String token) {
         Optional<Snippet> snippetOpt = snippetRepository.findById(snippetId);
         if (snippetOpt.isEmpty()) {
             return Response.withError(new Error<>(404, "Snippet not found"));
         }
 
-        Response<String> permissionsResponse = checkPermissions(snippetId, userId, token, "/snippets/hasAccess");
+        Response<String> permissionsResponse = webHandler.checkPermissions(snippetId, token, "/snippets/has-access");
         if (permissionsResponse.isError())
             return Response.withError(permissionsResponse.getError());
 
         Snippet snippet = snippetOpt.get();
 
-        Response<String> code = bucketRequestExecutor.get("snippets/" + snippetId, token);
-        if (code.isError())
-            return Response.withError(code.getError());
+        Response<String> response = bucketRequestExecutor.get("snippets/" + snippetId, token);
+        if (response.isError())
+            return Response.withError(response.getError());
+
+        String code = response.getData();
+        String version = snippet.getVersion();
+        String language = snippet.getLanguage();
+
+        Response<Void> printScriptResponse = webHandler.getLintingErrors(code, version, language, token);
+        List<ErrorMessage> errors = null;
+
+        if (printScriptResponse.getError() != null
+                && printScriptResponse.getError().body() instanceof List<?> errorBody) {
+            if (!errorBody.isEmpty() && errorBody.getFirst() instanceof ErrorMessage) {
+                errors = (List<ErrorMessage>) errorBody;
+            }
+        }
 
         SnippetDetails snippetDetails = new SnippetDetails(snippet.getTitle(), snippet.getDescription(),
-                snippet.getLanguage(), snippet.getVersion(), code.getData());
-
+                snippet.getLanguage(), version, code, errors);
         return Response.withData(snippetDetails);
     }
 
     public Response<String> shareSnippet(String userId, ShareSnippetDTO shareSnippetDTO, String token) {
         String snippetId = shareSnippetDTO.getSnippetId();
 
-        Response<String> permissionsResponse = checkPermissions(snippetId, userId, token, "/snippets/hasAccess");
+        Response<String> permissionsResponse = webHandler.checkPermissions(snippetId, token, "/snippets/has-access");
         if (permissionsResponse.isError())
             return permissionsResponse;
 
-        Response<String> permissionsResponse2 = saveRelation(token, shareSnippetDTO.getToUserId(), snippetId,
+        Response<String> permissionsResponse2 = webHandler.shareSnippet(token, shareSnippetDTO.getUsername(), snippetId,
                 "/snippets/save/share/relationship");
         if (permissionsResponse2.isError()) {
             return permissionsResponse2;
@@ -237,60 +180,8 @@ public class SnippetService {
         return Response.withData("Snippet shared successfully");
     }
 
-    private Response<String> saveRelation(String token, String userId, String snippetId, String path) {
-        HttpEntity<Permissions> requestPermissions = createPostPermissionsRequest(userId, snippetId, token);
-        try {
-            postRequest(permissionsWebClient, path, requestPermissions, Void.class);
-            return Response.withData(null);
-        } catch (HttpClientErrorException e) {
-            return Response.withError(new Error<>(e.getStatusCode().value(), e.getResponseBodyAsString()));
-        }
-    }
-
-    private Response<String> checkPermissions(String snippetId, String userId, String token, String path) {
-        HttpEntity<Void> requestPermissions = createGetPermissionsRequest(token);
-        Map<String, String> params = Map.of("snippetId", snippetId, "userId", userId);
-        try {
-            getRequest(permissionsWebClient, path, requestPermissions, Void.class, params);
-            return Response.withData(null);
-        } catch (HttpClientErrorException e) {
-            return Response.withError(new Error<>(e.getStatusCode().value(), e.getResponseBodyAsString()));
-        }
-    }
-
-    private Response<String> validateCode(String code, String version) {
-        HttpEntity<Validation> requestPrintScript = createPrintScriptRequest(code, version);
-        try {
-            postRequest(printScriptWebClient, "/runner/validate", requestPrintScript, Void.class);
-            return Response.withData(null);
-        } catch (HttpClientErrorException e) {
-            return getValidationErrors(e);
-        }
-    }
-
-    private Response<String> validateFileCode(MultipartFile file, String version) {
-        try {
-            HttpEntity<MultiValueMap<String, Object>> requestPrintScript = createPrintScriptFileRequest(file, version);
-            try {
-                postRequest(printScriptWebClient, "/runner/validate/file", requestPrintScript, Void.class);
-                return Response.withData(null);
-            } catch (HttpClientErrorException e) {
-                return getValidationErrors(e);
-            }
-        } catch (Exception err) {
-            return Response.withError(new Error<>(500, err.getMessage()));
-        }
-    }
-
-    private Response<String> getValidationErrors(HttpClientErrorException e) {
-        try {
-            List<ErrorMessage> errorMessages = objectMapper.readValue(e.getResponseBodyAsString(),
-                    new TypeReference<>() {
-                    });
-            return Response.withError(new Error<>(e.getStatusCode().value(), errorMessages));
-        } catch (JsonProcessingException ex) {
-            return Response.withError(new Error<>(e.getStatusCode().value(), e.getResponseBodyAsString()));
-        }
+    public void postToCyclon() {
+        lintProducer.publishEvent("ciclon");
     }
 
     private Response<Map<String, String>> getSnippetRelationships(String userId, String token) {
