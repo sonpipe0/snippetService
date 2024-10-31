@@ -10,9 +10,9 @@ import lombok.Setter;
 @NoArgsConstructor
 public class TestDTO {
 
-    @NotBlank
+    @NotBlank(message = "Test Id is required")
     private String testId;
 
-    @NotBlank
+    @NotBlank(message = "Rest result is required")
     private String testResult;
 }

@@ -8,18 +8,18 @@ import lombok.*;
 @NoArgsConstructor
 public class SnippetDTO {
 
-    @NotBlank
+    @NotBlank(message = "Title is required")
     private String title;
 
     private String description;
 
-    @NotBlank
+    @NotBlank(message = "Language is required")
     private String language;
 
-    @NotBlank
+    @NotBlank(message = "Version is required")
     private String version;
 
-    @NotBlank
+    @NotBlank(message = "Code is required")
     private String code;
 
     public SnippetDTO(String code, String title, String description, String language, String version) {

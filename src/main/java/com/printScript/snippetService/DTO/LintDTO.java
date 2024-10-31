@@ -12,9 +12,9 @@ import lombok.Setter;
 @AllArgsConstructor
 public class LintDTO {
 
-    @NotBlank
+    @NotBlank(message = "Code is required")
     private String code;
 
-    @NotBlank
+    @NotBlank(message = "Version is required")
     private String version;
 }

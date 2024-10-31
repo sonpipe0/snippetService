@@ -10,21 +10,21 @@ import lombok.Setter;
 @NoArgsConstructor
 public class UpdateSnippetDTO {
 
-    @NotBlank
+    @NotBlank(message = "Snippet id is required")
     private String snippetId;
 
-    @NotBlank
+    @NotBlank(message = "Title is required")
     private String title;
 
     private String description;
 
-    @NotBlank
+    @NotBlank(message = "Language is required")
     private String language;
 
-    @NotBlank
+    @NotBlank(message = "Version is required")
     private String version;
 
-    @NotBlank
+    @NotBlank(message = "Code is required")
     private String code;
 
     public UpdateSnippetDTO(String code, String snippetId, String title, String description, String language,
