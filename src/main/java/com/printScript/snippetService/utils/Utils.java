@@ -2,6 +2,7 @@ package com.printScript.snippetService.utils;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -13,6 +14,8 @@ import org.springframework.web.util.UriComponentsBuilder;
 import com.printScript.snippetService.DTO.Response;
 import com.printScript.snippetService.DTO.Validation;
 import com.printScript.snippetService.errorDTO.Error;
+
+import jakarta.validation.ConstraintViolation;
 
 public class Utils {
     public static Response<String> validateRequest(Map<String, String> request) {
@@ -73,5 +76,13 @@ public class Utils {
     public static void putRequest(RestTemplate webClient, String path, HttpEntity<?> request) {
         String url = createUrl(webClient, path);
         webClient.put(url, request);
+    }
+
+    public static <T> Error<?> getViolationsMessageError(Set<ConstraintViolation<T>> violations) {
+        StringBuilder message = new StringBuilder();
+        for (ConstraintViolation<?> violation : violations) {
+            message.append(violation.getMessage()).append("\n");
+        }
+        return new Error<>(400, message.toString());
     }
 }

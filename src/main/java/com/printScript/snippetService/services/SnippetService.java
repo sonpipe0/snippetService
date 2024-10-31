@@ -5,6 +5,7 @@ import static com.printScript.snippetService.utils.Utils.*;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -20,6 +21,9 @@ import com.printScript.snippetService.web.BucketRequestExecutor;
 import com.printScript.snippetService.web.SnippetServiceWebHandler;
 
 import jakarta.transaction.Transactional;
+import jakarta.validation.ConstraintViolation;
+import jakarta.validation.Validation;
+import jakarta.validation.Validator;
 
 @Service
 public class SnippetService {
@@ -35,6 +39,8 @@ public class SnippetService {
 
     private final LintProducerInterface lintProducer;
 
+    private final Validator validation = Validation.buildDefaultValidatorFactory().getValidator();
+
     @Autowired
     public SnippetService(LintProducerInterface lintProducer) {
         this.lintProducer = lintProducer;
@@ -42,15 +48,15 @@ public class SnippetService {
 
     @Transactional
     public Response<String> saveSnippet(SnippetDTO snippetDTO, String token) {
+        Set<ConstraintViolation<SnippetDTO>> violations = validation.validate(snippetDTO);
+        if (!violations.isEmpty()) {
+            return Response.withError(getViolationsMessageError(violations));
+        }
+
         String title = snippetDTO.getTitle();
         String language = snippetDTO.getLanguage();
         String version = snippetDTO.getVersion();
         String code = snippetDTO.getCode();
-
-        Response<String> validation = validateRequest(
-                Map.of("title", title, "language", language, "version", version, "code", code));
-        if (validation.isError())
-            return validation;
 
         Snippet snippet = new Snippet();
         snippet.setTitle(title);
@@ -87,6 +93,11 @@ public class SnippetService {
     }
 
     public Response<String> updateSnippet(UpdateSnippetDTO updateSnippetDTO, String token) {
+        Set<ConstraintViolation<UpdateSnippetDTO>> violations = validation.validate(updateSnippetDTO);
+        if (!violations.isEmpty()) {
+            return Response.withError(getViolationsMessageError(violations));
+        }
+
         String snippetId = updateSnippetDTO.getSnippetId();
         String title = updateSnippetDTO.getTitle();
         String language = updateSnippetDTO.getLanguage();
@@ -157,12 +168,17 @@ public class SnippetService {
             }
         }
 
-        SnippetDetails snippetDetails = new SnippetDetails(snippet.getTitle(), snippet.getDescription(),
+        SnippetDetails snippetDetails = new SnippetDetails(snippetId, snippet.getTitle(), snippet.getDescription(),
                 snippet.getLanguage(), version, code, errors);
         return Response.withData(snippetDetails);
     }
 
-    public Response<String> shareSnippet(String userId, ShareSnippetDTO shareSnippetDTO, String token) {
+    public Response<String> shareSnippet(ShareSnippetDTO shareSnippetDTO, String token) {
+        Set<ConstraintViolation<ShareSnippetDTO>> violations = validation.validate(shareSnippetDTO);
+        if (!violations.isEmpty()) {
+            return Response.withError(getViolationsMessageError(violations));
+        }
+
         String snippetId = shareSnippetDTO.getSnippetId();
 
         Response<String> permissionsResponse = webHandler.checkPermissions(snippetId, token, "/snippets/has-access");
