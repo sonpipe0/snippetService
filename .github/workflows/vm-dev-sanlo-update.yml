@@ -3,7 +3,7 @@ name: Run Script on Azure VM
 on:
   push:  
     branches:
-      - master
+      - dev
 
 jobs:
   update-images:
