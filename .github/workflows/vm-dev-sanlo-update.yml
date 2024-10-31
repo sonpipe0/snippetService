@@ -25,5 +25,5 @@ jobs:
         run: |
           ssh -v -o StrictHostKeyChecking=no sonpipe@${{ secrets.VM_DEV_IP }} << 'ENDSSH'
           cd micro-infra
-          bash update-stable.sh
+          bash update-dev.sh
           ENDSSH
