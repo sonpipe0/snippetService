@@ -1,4 +1,4 @@
-name: Run Script on Azure VM
+name: Run Script on DEV Azure VM
 
 on:
   push:  
