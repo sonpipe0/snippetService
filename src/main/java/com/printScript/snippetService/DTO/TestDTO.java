@@ -1,5 +1,6 @@
 package com.printScript.snippetService.DTO;
 
+import jakarta.validation.constraints.NotBlank;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -8,6 +9,10 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 public class TestDTO {
-    private String testId; // Cambia el nombre de este campo según tu entidad Test
-    private String testResult; // Cambia el nombre de este campo según lo que necesites mostrar
+
+    @NotBlank
+    private String testId;
+
+    @NotBlank
+    private String testResult;
 }

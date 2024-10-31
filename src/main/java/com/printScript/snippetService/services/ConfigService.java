@@ -1,5 +1,7 @@
 package com.printScript.snippetService.services;
 
+import static com.printScript.snippetService.utils.Utils.getViolationsMessageError;
+
 import java.io.IOException;
 import java.util.Optional;
 import java.util.Set;
@@ -35,7 +37,7 @@ public class ConfigService {
     @Autowired
     private FormatConfigRepository formatConfigRepository;
 
-    Validator validation = Validation.buildDefaultValidatorFactory().getValidator();
+    private final Validator validation = Validation.buildDefaultValidatorFactory().getValidator();
 
     public Response<Void> putLintingConfig(LintingConfigDTO lintingConfigDTO, String userId, String token)
             throws IOException {
@@ -162,13 +164,5 @@ public class ConfigService {
         } catch (Exception e) {
             return Response.withError(new Error<>(500, "Internal Server Error"));
         }
-    }
-
-    private <T> Error<?> getViolationsMessageError(Set<ConstraintViolation<T>> violations) {
-        StringBuilder message = new StringBuilder();
-        for (ConstraintViolation<?> violation : violations) {
-            message.append(violation.getMessage()).append("\n");
-        }
-        return new Error<>(400, message.toString());
     }
 }
