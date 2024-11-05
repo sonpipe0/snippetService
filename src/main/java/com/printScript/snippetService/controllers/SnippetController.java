@@ -31,7 +31,6 @@ public class SnippetController {
     @PostMapping("/save")
     public ResponseEntity<Object> saveSnippet(@RequestBody SnippetDTO snippetDTO,
             @RequestHeader("Authorization") String token) {
-
         Response<String> response = snippetService.saveSnippet(snippetDTO, token);
         if (response.isError()) {
             return new ResponseEntity<>(response.getError().body(), HttpStatusCode.valueOf(response.getError().code()));
@@ -47,6 +46,7 @@ public class SnippetController {
         if (mediaTypeCheck != null) {
             return mediaTypeCheck;
         }
+
         String code;
         try {
             code = new String(file.getBytes());

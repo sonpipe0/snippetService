@@ -1,17 +1,22 @@
 package com.printScript.snippetService.web;
 
 import static com.printScript.snippetService.utils.Utils.*;
-import static com.printScript.snippetService.utils.Utils.postRequest;
 
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
+import org.springframework.util.CollectionUtils;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -36,29 +41,35 @@ public class SnippetServiceWebHandler {
         this.objectMapper = objectMapper;
     }
 
-    public Response<Void> getLintingErrors(String code, String version, String language, String token) {
-        LintDTO lintDTO = new LintDTO(code, version);
+    public Response<String> saveRelation(String token, String snippetId, String path) {
         HttpHeaders headers = new HttpHeaders();
         headers.set("Authorization", token);
-        HttpEntity<LintDTO> requestPrintScript = new HttpEntity<>(lintDTO, headers);
+        HttpEntity<String> requestPermissions = new HttpEntity<>(snippetId, headers);
         try {
-            Void lintingErrors = postRequest(printScriptWebClient, "/runner/lintingErrors", requestPrintScript,
-                    Void.class);
+            postRequest(permissionsWebClient, path, requestPermissions, Void.class);
             return Response.withData(null);
         } catch (HttpClientErrorException e) {
-            String errors = e.getResponseBodyAsString();
-            try {
-                List<ErrorMessage> errorMessages = objectMapper.readValue(errors, new TypeReference<>() {
-                });
-                return Response.withError(new Error<>(e.getStatusCode().value(), errorMessages));
-            } catch (JsonProcessingException ex) {
-                return Response.withError(new Error<>(500, errors));
-            }
+            return Response.withError(new Error<>(e.getStatusCode().value(), e.getResponseBodyAsString()));
+        }
+    }
+
+    public Response<String> checkPermissions(String snippetId, String token, String path) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("Authorization", token);
+        HttpEntity<Void> requestPermissions = new HttpEntity<>(headers);
+        Map<String, String> params = Map.of("snippetId", snippetId);
+        try {
+            getRequest(permissionsWebClient, path, requestPermissions, Void.class, params);
+            return Response.withData(null);
+        } catch (HttpClientErrorException e) {
+            return Response.withError(new Error<>(e.getStatusCode().value(), e.getResponseBodyAsString()));
         }
     }
 
     public Response<String> validateCode(String code, String version, String token) {
-        HttpEntity<Validation> requestPrintScript = createValidatePrintScriptRequest(code, version, token);
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("Authorization", token);
+        HttpEntity<Validation> requestPrintScript = new HttpEntity<>(new Validation(code, version), headers);
         try {
             postRequest(printScriptWebClient, "/runner/validate", requestPrintScript, Void.class);
             return Response.withData(null);
@@ -78,10 +89,29 @@ public class SnippetServiceWebHandler {
         }
     }
 
-    public Response<String> saveRelation(String token, String snippetId, String path) {
+    public Response<Void> getLintingErrors(String code, String version, String language, String token) {
         HttpHeaders headers = new HttpHeaders();
         headers.set("Authorization", token);
-        HttpEntity<String> requestPermissions = new HttpEntity<>(snippetId, headers);
+        HttpEntity<Lint> requestPrintScript = new HttpEntity<>(new Lint(code, version), headers);
+        try {
+            postRequest(printScriptWebClient, "/runner/lintingErrors", requestPrintScript, Void.class);
+            return Response.withData(null);
+        } catch (HttpClientErrorException e) {
+            String errors = e.getResponseBodyAsString();
+            try {
+                List<ErrorMessage> errorMessages = objectMapper.readValue(errors, new TypeReference<>() {
+                });
+                return Response.withError(new Error<>(e.getStatusCode().value(), errorMessages));
+            } catch (JsonProcessingException ex) {
+                return Response.withError(new Error<>(500, errors));
+            }
+        }
+    }
+
+    public Response<String> shareSnippet(String token, ShareSnippetDTO shareSnippetDTO, String path) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("Authorization", token);
+        HttpEntity<ShareSnippetDTO> requestPermissions = new HttpEntity<>(shareSnippetDTO, headers);
         try {
             postRequest(permissionsWebClient, path, requestPermissions, Void.class);
             return Response.withData(null);
@@ -90,27 +120,20 @@ public class SnippetServiceWebHandler {
         }
     }
 
-    public Response<String> shareSnippet(String token, String userName, String snippetId, String path) {
-        HttpHeaders headers = new HttpHeaders();
-        headers.set("Authorization", token);
-        HttpEntity<ShareSnippetDTO> requestPermissions = new HttpEntity<>(new ShareSnippetDTO(snippetId, userName),
-                headers);
-        try {
-            postRequest(permissionsWebClient, path, requestPermissions, Void.class);
-            return Response.withData(null);
-        } catch (HttpClientErrorException e) {
-            return Response.withError(new Error<>(e.getStatusCode().value(), e.getResponseBodyAsString()));
-        }
+    private <T> T getRequest(RestTemplate webClient, String path, HttpEntity<?> request, Class<T> responseType,
+            Map<String, String> params) {
+        Map<String, List<String>> multiValueParams = params.entrySet().stream().collect(
+                Collectors.toMap(Map.Entry::getKey, e -> Stream.of(e.getValue()).collect(Collectors.toList())));
+
+        String urlTemplate = UriComponentsBuilder.fromHttpUrl(createUrl(webClient, path))
+                .queryParams(CollectionUtils.toMultiValueMap(multiValueParams)).toUriString();
+
+        ResponseEntity<T> response = webClient.exchange(urlTemplate, HttpMethod.GET, request, responseType, params);
+        return response.getBody();
     }
 
-    public Response<String> checkPermissions(String snippetId, String token, String path) {
-        HttpEntity<Void> requestPermissions = createGetPermissionsRequest(token);
-        Map<String, String> params = Map.of("snippetId", snippetId);
-        try {
-            getRequest(permissionsWebClient, path, requestPermissions, Void.class, params);
-            return Response.withData(null);
-        } catch (HttpClientErrorException e) {
-            return Response.withError(new Error<>(e.getStatusCode().value(), e.getResponseBodyAsString()));
-        }
+    private <T> T postRequest(RestTemplate webClient, String path, HttpEntity<?> request, Class<T> responseType) {
+        String url = createUrl(webClient, path);
+        return webClient.postForEntity(url, request, responseType).getBody();
     }
 }

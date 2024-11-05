@@ -3,7 +3,6 @@ package com.printScript.snippetService.services;
 import static com.printScript.snippetService.utils.Utils.*;
 
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
@@ -104,11 +103,6 @@ public class SnippetService {
         String version = updateSnippetDTO.getVersion();
         String code = updateSnippetDTO.getCode();
 
-        Response<String> validation = validateRequest(
-                Map.of("snippetId", snippetId, "title", title, "language", language, "version", version, "code", code));
-        if (validation.isError())
-            return validation;
-
         Optional<Snippet> snippetOptional = snippetRepository.findById(snippetId);
         if (snippetOptional.isEmpty()) {
             return Response.withError(new Error<>(404, "Snippet not found"));
@@ -179,13 +173,12 @@ public class SnippetService {
             return Response.withError(getViolationsMessageError(violations));
         }
 
-        String snippetId = shareSnippetDTO.getSnippetId();
-
-        Response<String> permissionsResponse = webHandler.checkPermissions(snippetId, token, "/snippets/has-access");
+        Response<String> permissionsResponse = webHandler.checkPermissions(shareSnippetDTO.getSnippetId(), token,
+                "/snippets/has-access");
         if (permissionsResponse.isError())
             return permissionsResponse;
 
-        Response<String> permissionsResponse2 = webHandler.shareSnippet(token, shareSnippetDTO.getUsername(), snippetId,
+        Response<String> permissionsResponse2 = webHandler.shareSnippet(token, shareSnippetDTO,
                 "/snippets/save/share/relationship");
         if (permissionsResponse2.isError()) {
             return permissionsResponse2;

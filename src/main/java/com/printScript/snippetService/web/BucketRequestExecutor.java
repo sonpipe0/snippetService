@@ -1,6 +1,6 @@
 package com.printScript.snippetService.web;
 
-import static com.printScript.snippetService.utils.Utils.putRequest;
+import static com.printScript.snippetService.utils.Utils.createUrl;
 
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -30,6 +30,11 @@ public class BucketRequestExecutor {
         } catch (HttpClientErrorException e) {
             return Response.withError(new Error<>(500, "Internal Server Error"));
         }
+    }
+
+    private void putRequest(RestTemplate webClient, String path, HttpEntity<?> request) {
+        String url = createUrl(webClient, path);
+        webClient.put(url, request);
     }
 
     public Response<String> get(String path, String token) {
