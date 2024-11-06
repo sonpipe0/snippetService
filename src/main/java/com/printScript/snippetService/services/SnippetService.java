@@ -16,8 +16,9 @@ import com.printScript.snippetService.errorDTO.Error;
 import com.printScript.snippetService.errorDTO.ErrorMessage;
 import com.printScript.snippetService.redis.LintProducerInterface;
 import com.printScript.snippetService.repositories.SnippetRepository;
-import com.printScript.snippetService.web.BucketRequestExecutor;
-import com.printScript.snippetService.web.SnippetServiceWebHandler;
+import com.printScript.snippetService.web.handlers.BucketHandler;
+import com.printScript.snippetService.web.handlers.PermissionsManagerHandler;
+import com.printScript.snippetService.web.handlers.PrintScriptServiceHandler;
 
 import jakarta.transaction.Transactional;
 import jakarta.validation.ConstraintViolation;
@@ -31,10 +32,13 @@ public class SnippetService {
     private SnippetRepository snippetRepository;
 
     @Autowired
-    private BucketRequestExecutor bucketRequestExecutor;
+    private BucketHandler bucketHandler;
 
     @Autowired
-    private SnippetServiceWebHandler webHandler;
+    private PermissionsManagerHandler permissionsManagerHandler;
+
+    @Autowired
+    private PrintScriptServiceHandler printScriptServiceHandler;
 
     private final LintProducerInterface lintProducer;
 
@@ -72,19 +76,20 @@ public class SnippetService {
 
         String snippetId = snippet.getId();
 
-        Response<String> permissionsResponse = webHandler.saveRelation(token, snippetId, "/snippets/save/relationship");
+        Response<String> permissionsResponse = permissionsManagerHandler.saveRelation(token, snippetId,
+                "/snippets/save/relationship");
         if (permissionsResponse.isError()) {
             TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
             return permissionsResponse;
         }
 
-        Response<String> printScriptResponse = webHandler.validateCode(code, version, token);
+        Response<String> printScriptResponse = printScriptServiceHandler.validateCode(code, version, token);
         if (printScriptResponse.isError()) {
             TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
             return printScriptResponse;
         }
 
-        Response<Void> response = bucketRequestExecutor.put("snippets/" + snippetId, code, token);
+        Response<Void> response = bucketHandler.put("snippets/" + snippetId, code, token);
         if (response.isError())
             return Response.withError(response.getError());
 
@@ -108,11 +113,12 @@ public class SnippetService {
             return Response.withError(new Error<>(404, "Snippet not found"));
         }
 
-        Response<String> permissionsResponse = webHandler.checkPermissions(snippetId, token, "/snippets/can-edit");
+        Response<String> permissionsResponse = permissionsManagerHandler.checkPermissions(snippetId, token,
+                "/snippets/can-edit");
         if (permissionsResponse.isError())
             return permissionsResponse;
 
-        Response<String> printScriptResponse = webHandler.validateCode(code, version, token);
+        Response<String> printScriptResponse = printScriptServiceHandler.validateCode(code, version, token);
         if (printScriptResponse.isError())
             return printScriptResponse;
         Snippet snippet = snippetOptional.get();
@@ -128,7 +134,7 @@ public class SnippetService {
             return Response.withError(new Error<>(500, e.getMessage()));
         }
 
-        bucketRequestExecutor.put("snippets/" + snippetId, code, token);
+        bucketHandler.put("snippets/" + snippetId, code, token);
         return Response.withData("Snippet updated successfully");
     }
 
@@ -138,13 +144,14 @@ public class SnippetService {
             return Response.withError(new Error<>(404, "Snippet not found"));
         }
 
-        Response<String> permissionsResponse = webHandler.checkPermissions(snippetId, token, "/snippets/has-access");
+        Response<String> permissionsResponse = permissionsManagerHandler.checkPermissions(snippetId, token,
+                "/snippets/has-access");
         if (permissionsResponse.isError())
             return Response.withError(permissionsResponse.getError());
 
         Snippet snippet = snippetOpt.get();
 
-        Response<String> response = bucketRequestExecutor.get("snippets/" + snippetId, token);
+        Response<String> response = bucketHandler.get("snippets/" + snippetId, token);
         if (response.isError())
             return Response.withError(response.getError());
 
@@ -152,7 +159,7 @@ public class SnippetService {
         String version = snippet.getVersion();
         String language = snippet.getLanguage();
 
-        Response<Void> printScriptResponse = webHandler.getLintingErrors(code, version, language, token);
+        Response<Void> printScriptResponse = printScriptServiceHandler.getLintingErrors(code, version, language, token);
         List<ErrorMessage> errors = null;
 
         if (printScriptResponse.getError() != null
@@ -173,12 +180,12 @@ public class SnippetService {
             return Response.withError(getViolationsMessageError(violations));
         }
 
-        Response<String> permissionsResponse = webHandler.checkPermissions(shareSnippetDTO.getSnippetId(), token,
-                "/snippets/has-access");
+        Response<String> permissionsResponse = permissionsManagerHandler
+                .checkPermissions(shareSnippetDTO.getSnippetId(), token, "/snippets/has-access");
         if (permissionsResponse.isError())
             return permissionsResponse;
 
-        Response<String> permissionsResponse2 = webHandler.shareSnippet(token, shareSnippetDTO,
+        Response<String> permissionsResponse2 = permissionsManagerHandler.shareSnippet(token, shareSnippetDTO,
                 "/snippets/save/share/relationship");
         if (permissionsResponse2.isError()) {
             return permissionsResponse2;

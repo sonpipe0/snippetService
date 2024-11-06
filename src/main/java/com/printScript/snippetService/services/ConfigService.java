@@ -15,7 +15,7 @@ import com.printScript.snippetService.entities.LintConfig;
 import com.printScript.snippetService.errorDTO.Error;
 import com.printScript.snippetService.repositories.FormatConfigRepository;
 import com.printScript.snippetService.repositories.LintingConfigRepository;
-import com.printScript.snippetService.web.BucketRequestExecutor;
+import com.printScript.snippetService.web.handlers.BucketHandler;
 
 import DTO.FormatConfigDTO;
 import DTO.LintingConfigDTO;
@@ -29,7 +29,7 @@ import jakarta.validation.Validator;
 public class ConfigService {
 
     @Autowired
-    private BucketRequestExecutor bucketRequestExecutor;
+    private BucketHandler bucketHandler;
 
     @Autowired
     private LintingConfigRepository lintingConfigRepository;
@@ -47,7 +47,7 @@ public class ConfigService {
         }
         String lintJson = new LintSerializer().serialize(lintingConfigDTO);
         try {
-            bucketRequestExecutor.put("lint/" + userId, lintJson, token);
+            bucketHandler.put("lint/" + userId, lintJson, token);
         } catch (Exception e) {
             return Response.withError(new Error<>(500, "Internal Server Error"));
         }
@@ -69,7 +69,7 @@ public class ConfigService {
             if (lintConfig.isEmpty()) {
                 return Response.withError(new Error<>(404, "Not Found"));
             }
-            Response<String> response = bucketRequestExecutor.get("lint/" + userId, token);
+            Response<String> response = bucketHandler.get("lint/" + userId, token);
             if (response.getError() != null) {
                 return Response.withError(response.getError());
             }
@@ -92,7 +92,7 @@ public class ConfigService {
             lintConfig.setVersion("1.1");
             lintingConfigRepository.save(lintConfig);
             String lintJson = new LintSerializer().serialize(lintingConfigDTO);
-            bucketRequestExecutor.put("lint/" + userId, lintJson, token);
+            bucketHandler.put("lint/" + userId, lintJson, token);
             return Response.withData(null);
         } catch (Exception e) {
             return Response.withError(new Error<>(500, "Internal Server Error"));
@@ -107,7 +107,7 @@ public class ConfigService {
         }
         String formatJson = new FormatSerializer().serialize(formatConfigDTO);
         try {
-            bucketRequestExecutor.put("format/" + userId, formatJson, token);
+            bucketHandler.put("format/" + userId, formatJson, token);
         } catch (Exception e) {
             return Response.withError(new Error<>(500, "Internal Server Error"));
         }
@@ -129,7 +129,7 @@ public class ConfigService {
             if (formatConfig.isEmpty()) {
                 return Response.withError(new Error<>(404, "Not Found"));
             }
-            Response<String> response = bucketRequestExecutor.get("format/" + userId, token);
+            Response<String> response = bucketHandler.get("format/" + userId, token);
             if (response.getError() != null) {
                 return Response.withError(response.getError());
             }
@@ -159,7 +159,7 @@ public class ConfigService {
             formatConfig.setVersion("1.1");
             formatConfigRepository.save(formatConfig);
             String formatJson = new FormatSerializer().serialize(formatConfigDTO);
-            bucketRequestExecutor.put("format/" + userId, formatJson, token);
+            bucketHandler.put("format/" + userId, formatJson, token);
             return Response.withData(null);
         } catch (Exception e) {
             return Response.withError(new Error<>(500, "Internal Server Error"));

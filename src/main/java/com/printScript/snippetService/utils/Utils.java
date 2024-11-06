@@ -3,8 +3,6 @@ package com.printScript.snippetService.utils;
 import java.util.Set;
 
 import org.springframework.http.*;
-import org.springframework.web.client.RestTemplate;
-import org.springframework.web.util.UriComponentsBuilder;
 
 import com.printScript.snippetService.errorDTO.Error;
 
@@ -17,11 +15,6 @@ public class Utils {
             // 415 Unsupported Media Type
         }
         return null;
-    }
-
-    public static String createUrl(RestTemplate printScriptWebClient, String path) {
-        String rootUri = printScriptWebClient.getUriTemplateHandler().expand("/").toString();
-        return UriComponentsBuilder.fromHttpUrl(rootUri).path(path).toUriString();
     }
 
     public static <T> Error<?> getViolationsMessageError(Set<ConstraintViolation<T>> violations) {
