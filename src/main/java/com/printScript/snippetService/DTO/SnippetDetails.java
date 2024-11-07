@@ -1,9 +1,7 @@
 package com.printScript.snippetService.DTO;
 
-import java.util.List;
-
-import com.printScript.snippetService.errorDTO.ErrorMessage;
+import com.printScript.snippetService.entities.Snippet;
 
 public record SnippetDetails(String snippetId, String title, String description, String language, String version,
-        String content, List<ErrorMessage> lintingErrors) {
+        String content, Snippet.Status status) {
 }

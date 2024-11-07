@@ -2,10 +2,11 @@ package com.printScript.snippetService.services;
 
 import static com.printScript.snippetService.utils.Utils.*;
 
-import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.interceptor.TransactionAspectSupport;
@@ -13,13 +14,15 @@ import org.springframework.transaction.interceptor.TransactionAspectSupport;
 import com.printScript.snippetService.DTO.*;
 import com.printScript.snippetService.entities.Snippet;
 import com.printScript.snippetService.errorDTO.Error;
-import com.printScript.snippetService.errorDTO.ErrorMessage;
 import com.printScript.snippetService.redis.LintProducerInterface;
 import com.printScript.snippetService.repositories.SnippetRepository;
+import com.printScript.snippetService.utils.TokenUtils;
+import com.printScript.snippetService.web.ConfigServiceWebHandler;
 import com.printScript.snippetService.web.handlers.BucketHandler;
 import com.printScript.snippetService.web.handlers.PermissionsManagerHandler;
 import com.printScript.snippetService.web.handlers.PrintScriptServiceHandler;
 
+import events.ConfigPublishEvent;
 import jakarta.transaction.Transactional;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validation;
@@ -44,6 +47,10 @@ public class SnippetService {
 
     private final Validator validation = Validation.buildDefaultValidatorFactory().getValidator();
 
+    private static final Logger logger = LoggerFactory.getLogger(SnippetService.class);
+    @Autowired
+    private ConfigServiceWebHandler configServiceWebHandler;
+
     @Autowired
     public SnippetService(LintProducerInterface lintProducer) {
         this.lintProducer = lintProducer;
@@ -66,6 +73,8 @@ public class SnippetService {
         snippet.setDescription(snippetDTO.getDescription());
         snippet.setLanguage(language);
         snippet.setVersion(version);
+        snippet.setLintStatus(Snippet.Status.IN_PROGRESS);
+        snippet.setFormatStatus(Snippet.Status.IN_PROGRESS);
 
         try {
             snippetRepository.save(snippet);
@@ -92,6 +101,8 @@ public class SnippetService {
         Response<Void> response = bucketHandler.put("snippets/" + snippetId, code, token);
         if (response.isError())
             return Response.withError(response.getError());
+
+        generateEvents(token, snippetId, snippet);
 
         return Response.withData(snippetId);
     }
@@ -126,6 +137,8 @@ public class SnippetService {
         snippet.setDescription(updateSnippetDTO.getDescription());
         snippet.setLanguage(language);
         snippet.setVersion(version);
+        snippet.setLintStatus(Snippet.Status.IN_PROGRESS);
+        snippet.setFormatStatus(Snippet.Status.IN_PROGRESS);
 
         try {
             snippetRepository.save(snippet);
@@ -135,6 +148,9 @@ public class SnippetService {
         }
 
         bucketHandler.put("snippets/" + snippetId, code, token);
+
+        generateEvents(token, snippetId, snippet);
+        snippetRepository.save(snippet);
         return Response.withData("Snippet updated successfully");
     }
 
@@ -159,18 +175,10 @@ public class SnippetService {
         String version = snippet.getVersion();
         String language = snippet.getLanguage();
 
-        Response<Void> printScriptResponse = printScriptServiceHandler.getLintingErrors(code, version, language, token);
-        List<ErrorMessage> errors = null;
-
-        if (printScriptResponse.getError() != null
-                && printScriptResponse.getError().body() instanceof List<?> errorBody) {
-            if (!errorBody.isEmpty() && errorBody.getFirst() instanceof ErrorMessage) {
-                errors = (List<ErrorMessage>) errorBody;
-            }
-        }
+        Snippet.Status lintStatus = snippet.getLintStatus();
 
         SnippetDetails snippetDetails = new SnippetDetails(snippetId, snippet.getTitle(), snippet.getDescription(),
-                snippet.getLanguage(), version, code, errors);
+                snippet.getLanguage(), version, code, lintStatus);
         return Response.withData(snippetDetails);
     }
 
@@ -194,7 +202,51 @@ public class SnippetService {
         return Response.withData("Snippet shared successfully");
     }
 
-    public void postToCyclon() {
-        lintProducer.publishEvent("ciclon");
+    public Response<String> getFormattedFile(String snippetId, String token) {
+        Response<String> permissionsResponse = permissionsManagerHandler.checkPermissions(snippetId, token,
+                "/snippets/has-access");
+        if (permissionsResponse.isError())
+            return permissionsResponse;
+
+        Optional<Snippet> snippetOptional = snippetRepository.findById(snippetId);
+        if (snippetOptional.isEmpty()) {
+            return Response.withError(new Error<>(404, "Snippet not found"));
+        }
+
+        Snippet snippet = snippetOptional.get();
+        if (snippet.getFormatStatus() == Snippet.Status.IN_PROGRESS) {
+            return Response.withError(new Error<>(400, "Format is in progress"));
+        }
+
+        Response<String> response;
+        try {
+            response = bucketHandler.get("formatted/" + snippetId, token);
+            if (response.isError()) {
+                return response;
+            }
+        } catch (Exception e) {
+            return Response.withError(new Error<>(500, "Internal Server Error"));
+        }
+        return Response.withData(response.getData());
+    }
+
+    private void generateEvents(String token, String snippetId, Snippet snippet) {
+        ConfigPublishEvent lintPublishEvent = new ConfigPublishEvent();
+        String userId = TokenUtils.decodeToken(token.substring(7)).get("userId");
+        lintPublishEvent.setSnippetId(snippetId);
+        lintPublishEvent.setUserId(userId);
+        lintPublishEvent.setType(ConfigPublishEvent.ConfigType.LINT);
+
+        lintProducer.publishEvent(lintPublishEvent);
+
+        snippet.setLintStatus(Snippet.Status.IN_PROGRESS);
+        snippetRepository.save(snippet);
+
+        ConfigPublishEvent formatPublishEvent = new ConfigPublishEvent();
+        formatPublishEvent.setSnippetId(snippetId);
+        formatPublishEvent.setUserId(userId);
+        formatPublishEvent.setType(ConfigPublishEvent.ConfigType.FORMAT);
+
+        lintProducer.publishEvent(formatPublishEvent);
     }
 }
