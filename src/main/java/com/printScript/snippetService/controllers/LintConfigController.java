@@ -25,4 +25,11 @@ public class LintConfigController {
         String userId = decoded.get("userId");
         configService.putLintingConfig(lintingConfigDTO, userId, token);
     }
+
+    @GetMapping
+    public void getLintingConfig(@RequestHeader("Authorization") String token) {
+        Map<String, String> decoded = TokenUtils.decodeToken(token.substring(7));
+        String userId = decoded.get("userId");
+        configService.getLintingConfig(userId, token);
+    }
 }

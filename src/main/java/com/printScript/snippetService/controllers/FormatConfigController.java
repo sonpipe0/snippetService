@@ -31,4 +31,15 @@ public class FormatConfigController {
         }
         return ResponseEntity.ok(response.getData());
     }
+
+    @GetMapping
+    public ResponseEntity<Object> getFormatConfig(@RequestHeader("Authorization") String token) {
+        Map<String, String> decoded = TokenUtils.decodeToken(token.substring(7));
+        String userId = decoded.get("userId");
+        Response<FormatConfigDTO> response = configService.getFormatConfig(userId, token);
+        if (response.isError()) {
+            return ResponseEntity.status(response.getError().code()).body(response.getError());
+        }
+        return ResponseEntity.ok(response.getData());
+    }
 }
