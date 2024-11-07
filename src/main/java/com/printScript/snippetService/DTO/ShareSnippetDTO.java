@@ -10,9 +10,9 @@ import lombok.Setter;
 @AllArgsConstructor
 public class ShareSnippetDTO {
 
-    @NotBlank
+    @NotBlank(message = "Snippet ID is required")
     private String snippetId;
 
-    @NotBlank
+    @NotBlank(message = "Username is required")
     private String username;
 }

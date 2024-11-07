@@ -1,6 +1,6 @@
 package com.printScript.snippetService.web;
 
-import static com.printScript.snippetService.utils.Utils.getRequest;
+import static com.printScript.snippetService.web.RequestExecutor.getRequest;
 
 import java.util.List;
 import java.util.Map;
@@ -23,14 +23,11 @@ import com.printScript.snippetService.services.RestTemplateService;
 public class ConfigServiceWebHandler {
 
     private final RestTemplate permissionsWebClient;
-    private final RestTemplate printScriptWebClient;
     private final ObjectMapper objectMapper;
 
     @Autowired
-    public ConfigServiceWebHandler(RestTemplateService permissionsRestTemplate,
-            RestTemplateService printScriptRestTemplate, ObjectMapper objectMapper) {
+    public ConfigServiceWebHandler(RestTemplateService permissionsRestTemplate, ObjectMapper objectMapper) {
         this.permissionsWebClient = permissionsRestTemplate.getRestTemplate();
-        this.printScriptWebClient = printScriptRestTemplate.getRestTemplate();
         this.objectMapper = objectMapper;
     }
 

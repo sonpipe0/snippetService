@@ -15,7 +15,6 @@ import org.springframework.stereotype.Component;
 
 import com.printScript.snippetService.entities.Snippet;
 import com.printScript.snippetService.repositories.SnippetRepository;
-import com.printScript.snippetService.web.BucketRequestExecutor;
 
 import events.ConfigPublishEvent;
 import events.StatusPublishEvent;
@@ -24,9 +23,6 @@ import events.StatusPublishEvent;
 public class StatusConsumer extends RedisStreamConsumer<StatusPublishEvent> {
 
     private static final Logger logger = LoggerFactory.getLogger(StatusConsumer.class);
-
-    @Autowired
-    BucketRequestExecutor bucketRequestExecutor;
 
     @Autowired
     SnippetRepository snippetRepository;
