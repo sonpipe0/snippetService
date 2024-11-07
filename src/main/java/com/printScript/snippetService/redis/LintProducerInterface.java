@@ -1,5 +1,7 @@
 package com.printScript.snippetService.redis;
 
+import events.ConfigPublishEvent;
+
 public interface LintProducerInterface {
-    void publishEvent(String name);
+    void publishEvent(ConfigPublishEvent event);
 }

@@ -36,27 +36,6 @@ public class SnippetServiceWebHandler {
         this.objectMapper = objectMapper;
     }
 
-    public Response<Void> getLintingErrors(String code, String version, String language, String token) {
-        LintDTO lintDTO = new LintDTO(code, version);
-        HttpHeaders headers = new HttpHeaders();
-        headers.set("Authorization", token);
-        HttpEntity<LintDTO> requestPrintScript = new HttpEntity<>(lintDTO, headers);
-        try {
-            Void lintingErrors = postRequest(printScriptWebClient, "/runner/lintingErrors", requestPrintScript,
-                    Void.class);
-            return Response.withData(null);
-        } catch (HttpClientErrorException e) {
-            String errors = e.getResponseBodyAsString();
-            try {
-                List<ErrorMessage> errorMessages = objectMapper.readValue(errors, new TypeReference<>() {
-                });
-                return Response.withError(new Error<>(e.getStatusCode().value(), errorMessages));
-            } catch (JsonProcessingException ex) {
-                return Response.withError(new Error<>(500, errors));
-            }
-        }
-    }
-
     public Response<String> validateCode(String code, String version, String token) {
         HttpEntity<Validation> requestPrintScript = createValidatePrintScriptRequest(code, version, token);
         try {

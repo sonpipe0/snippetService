@@ -105,18 +105,6 @@ public class SnippetController {
         return ResponseEntity.ok(response.getData());
     }
 
-    @PostMapping("/redis")
-    public ResponseEntity<Object> postToV1StreamCiclon() {
-        logger.info("Received request to post to v1 stream ciclon");
-        try {
-            snippetService.postToCyclon();
-            return ResponseEntity.ok("Event produced successfully");
-        } catch (Exception e) {
-            logger.severe("Error while posting to v1 stream ciclon: " + e.getMessage());
-            return new ResponseEntity<>(e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
-        }
-    }
-
     @PostMapping("/share")
     public ResponseEntity<Object> shareSnippet(@RequestBody ShareSnippetDTO shareSnippetDTO,
             @RequestHeader("Authorization") String token) {
@@ -125,5 +113,15 @@ public class SnippetController {
             return new ResponseEntity<>(response.getError().body(), HttpStatusCode.valueOf(response.getError().code()));
         }
         return ResponseEntity.ok("Snippet shared successfully");
+    }
+
+    @GetMapping("/get/formatted")
+    public ResponseEntity<Object> getFormattedSnippet(@RequestParam String snippetId,
+            @RequestHeader("Authorization") String token) {
+        Response<String> response = snippetService.getFormattedFile(snippetId, token);
+        if (response.isError()) {
+            return new ResponseEntity<>(response.getError().body(), HttpStatusCode.valueOf(response.getError().code()));
+        }
+        return ResponseEntity.ok(response.getData());
     }
 }

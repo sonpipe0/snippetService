@@ -13,10 +13,4 @@ import lombok.Setter;
 public class LintConfig {
     @Id
     private String id;
-
-    @Column(nullable = false)
-    private String language;
-
-    @Column(nullable = false)
-    private String version;
 }
