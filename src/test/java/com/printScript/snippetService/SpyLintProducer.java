@@ -9,18 +9,20 @@ import org.springframework.stereotype.Component;
 
 import com.printScript.snippetService.redis.LintProducerInterface;
 
+import events.ConfigPublishEvent;
+
 @Primary
 @Component
 public class SpyLintProducer implements LintProducerInterface {
 
-    private final ArrayList<String> seen = new ArrayList<>();
+    private final ArrayList<ConfigPublishEvent> seen = new ArrayList<>();
 
     @Override
-    public void publishEvent(String name) {
+    public void publishEvent(ConfigPublishEvent name) {
         seen.add(name);
     }
 
-    public List<String> events() {
+    public List<ConfigPublishEvent> events() {
         return Collections.unmodifiableList(seen);
     }
 

@@ -1,6 +1,6 @@
-package com.printScript.snippetService.web;
+package com.printScript.snippetService.web.handlers;
 
-import static com.printScript.snippetService.utils.Utils.putRequest;
+import static com.printScript.snippetService.web.RequestExecutor.putRequest;
 
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -13,10 +13,10 @@ import com.printScript.snippetService.errorDTO.Error;
 import com.printScript.snippetService.services.RestTemplateService;
 
 @Component
-public class BucketRequestExecutor {
+public class BucketHandler {
     private final RestTemplate bucketWebClient;
 
-    public BucketRequestExecutor(RestTemplateService bucketRestTemplate) {
+    public BucketHandler(RestTemplateService bucketRestTemplate) {
         this.bucketWebClient = bucketRestTemplate.getRestTemplate();
     }
 
