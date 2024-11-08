@@ -2,7 +2,6 @@ package com.printScript.snippetService.services;
 
 import static com.printScript.snippetService.utils.Utils.*;
 
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -154,7 +153,7 @@ public class SnippetService {
 
         if (printScriptResponse.getError() != null
                 && printScriptResponse.getError().body() instanceof List<?> errorBody) {
-            if (!errorBody.isEmpty() && errorBody.getFirst() instanceof ErrorMessage) {
+            if (!errorBody.isEmpty() && errorBody.get(0) instanceof ErrorMessage) {
                 errors = (List<ErrorMessage>) errorBody;
             }
         }
@@ -184,19 +183,9 @@ public class SnippetService {
         lintProducer.publishEvent("ciclon");
     }
 
-    private Response<Map<String, String>> getSnippetRelationships(String userId, String token) {
-        HttpEntity<Void> requestPermissions = createGetPermissionsRequest(token);
-        Map<String, String> params = Map.of("userId", userId);
-        try {
-            getRequest(permissionsWebClient, "/snippets/get/relationships", requestPermissions, Void.class, params);
-            return Response.withData(null);
-        } catch (HttpClientErrorException e) {
-            return Response.withError(new Error<>(e.getStatusCode().value(), e.getResponseBodyAsString()));
-        }
-    }
-
-    public Response<List<SnippetDetails>> getAccessibleSnippets(String userId, String token, String relation, String nameFilter, String languageFilter, Boolean isValid) {
-        Response<Map<String, String>> relationshipsResponse = getSnippetRelationships(userId, token);
+    public Response<List<SnippetDetails>> getAccessibleSnippets(String token, String relation, String nameFilter,
+            String languageFilter, Boolean isValid) {
+        Response<Map<String, String>> relationshipsResponse = webHandler.getSnippetRelationships(token);
         if (relationshipsResponse.isError()) {
             return Response.withError(relationshipsResponse.getError());
         }
@@ -231,11 +220,11 @@ public class SnippetService {
                 continue;
             }
 
-            SnippetDetails snippetDetails = new SnippetDetails(snippet.getTitle(), snippet.getDescription(), snippet.getLanguage(), snippet.getVersion(), codeResponse.getData());
+            SnippetDetails snippetDetails = new SnippetDetails(snippet.getTitle(), snippet.getDescription(),
+                    snippet.getLanguage(), snippet.getVersion(), codeResponse.getData(), null);
             accessibleSnippets.add(snippetDetails);
         }
 
         return Response.withData(accessibleSnippets);
     }
-
 }

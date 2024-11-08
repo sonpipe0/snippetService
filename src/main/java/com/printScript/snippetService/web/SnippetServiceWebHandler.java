@@ -113,4 +113,21 @@ public class SnippetServiceWebHandler {
             return Response.withError(new Error<>(e.getStatusCode().value(), e.getResponseBodyAsString()));
         }
     }
+
+    public Response<Map<String, String>> getSnippetRelationships(String token) {
+        HttpEntity<Void> requestPermissions = createGetPermissionsRequest(token);
+        Map<String, String> params = Map.of();
+        try {
+            String response = getRequest(permissionsWebClient, "/snippets/get/relationships", requestPermissions,
+                    String.class, params);
+            Map<String, String> relationships = objectMapper.readValue(response,
+                    new TypeReference<Map<String, String>>() {
+                    });
+            return Response.withData(relationships);
+        } catch (HttpClientErrorException e) {
+            return Response.withError(new Error<>(e.getStatusCode().value(), e.getResponseBodyAsString()));
+        } catch (JsonProcessingException e) {
+            return Response.withError(new Error<>(400, e.getMessage()));
+        }
+    }
 }

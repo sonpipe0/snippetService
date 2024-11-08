@@ -2,9 +2,8 @@ package com.printScript.snippetService.controllers;
 
 import static com.printScript.snippetService.utils.Utils.checkMediaType;
 
-import java.util.logging.Logger;
 import java.util.List;
-import java.util.Map;
+import java.util.logging.Logger;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -131,13 +130,11 @@ public class SnippetController {
 
     @GetMapping("/accessible")
     public ResponseEntity<Response<List<SnippetDetails>>> getAccessibleSnippets(
-            @RequestParam String userId,
-            @RequestHeader("Authorization") String token,
-            @RequestParam(required = false) String relation,
-            @RequestParam(required = false) String nameFilter,
-            @RequestParam(required = false) String languageFilter,
-            @RequestParam(required = false) Boolean isValid) {
-        Response<List<SnippetDetails>> response = snippetService.getAccessibleSnippets(userId, token, relation, nameFilter, languageFilter, isValid);
+            @RequestHeader("Authorization") String token, @RequestPart(required = false) String relation,
+            @RequestPart(required = false) String nameFilter, @RequestPart(required = false) String languageFilter,
+            @RequestPart(required = false) Boolean isValid) {
+        Response<List<SnippetDetails>> response = snippetService.getAccessibleSnippets(token, relation, nameFilter,
+                languageFilter, isValid);
         if (response.isError()) {
             return new ResponseEntity<>(response, HttpStatus.valueOf(response.getError().code()));
         }

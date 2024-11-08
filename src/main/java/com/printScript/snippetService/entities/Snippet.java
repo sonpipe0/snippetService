@@ -46,8 +46,4 @@ public class Snippet {
         }
         return invalidFields;
     }
-
-    public Object getUserId() {
-        return this.getUserId();
-    }
 }
