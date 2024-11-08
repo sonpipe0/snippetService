@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.printScript.snippetService.DTO.*;
+import com.printScript.snippetService.entities.Snippet;
 import com.printScript.snippetService.redis.LintProducerInterface;
 import com.printScript.snippetService.services.SnippetService;
 
@@ -32,7 +33,6 @@ public class SnippetController {
     @PostMapping("/save")
     public ResponseEntity<Object> saveSnippet(@RequestBody SnippetDTO snippetDTO,
             @RequestHeader("Authorization") String token) {
-
         Response<String> response = snippetService.saveSnippet(snippetDTO, token);
         if (response.isError()) {
             return new ResponseEntity<>(response.getError().body(), HttpStatusCode.valueOf(response.getError().code()));
@@ -48,6 +48,7 @@ public class SnippetController {
         if (mediaTypeCheck != null) {
             return mediaTypeCheck;
         }
+
         String code;
         try {
             code = new String(file.getBytes());
@@ -106,35 +107,35 @@ public class SnippetController {
         return ResponseEntity.ok(response.getData());
     }
 
-    @PostMapping("/redis")
-    public ResponseEntity<Object> postToV1StreamCiclon() {
-        logger.info("Received request to post to v1 stream ciclon");
-        try {
-            snippetService.postToCyclon();
-            return ResponseEntity.ok("Event produced successfully");
-        } catch (Exception e) {
-            logger.severe("Error while posting to v1 stream ciclon: " + e.getMessage());
-            return new ResponseEntity<>(e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
-        }
-    }
-
     @PostMapping("/share")
-    public ResponseEntity<Object> shareSnippet(@RequestParam String userId,
-            @RequestBody ShareSnippetDTO shareSnippetDTO, @RequestHeader("Authorization") String token) {
-        Response<String> response = snippetService.shareSnippet(userId, shareSnippetDTO, token);
+    public ResponseEntity<Object> shareSnippet(@RequestBody ShareSnippetDTO shareSnippetDTO,
+            @RequestHeader("Authorization") String token) {
+        Response<String> response = snippetService.shareSnippet(shareSnippetDTO, token);
         if (response.isError()) {
             return new ResponseEntity<>(response.getError().body(), HttpStatusCode.valueOf(response.getError().code()));
         }
         return ResponseEntity.ok("Snippet shared successfully");
     }
 
+    @GetMapping("/get/formatted")
+    public ResponseEntity<Object> getFormattedSnippet(@RequestParam String snippetId,
+            @RequestHeader("Authorization") String token) {
+        Response<String> response = snippetService.getFormattedFile(snippetId, token);
+        if (response.isError()) {
+            return new ResponseEntity<>(response.getError().body(), HttpStatusCode.valueOf(response.getError().code()));
+        }
+        return ResponseEntity.ok(response.getData());
+    }
+
     @GetMapping("/accessible")
     public ResponseEntity<Response<List<SnippetDetails>>> getAccessibleSnippets(
-            @RequestHeader("Authorization") String token, @RequestPart(required = false) String relation,
-            @RequestPart(required = false) String nameFilter, @RequestPart(required = false) String languageFilter,
-            @RequestPart(required = false) Boolean isValid) {
-        Response<List<SnippetDetails>> response = snippetService.getAccessibleSnippets(token, relation, nameFilter,
-                languageFilter, isValid);
+            @RequestHeader("Authorization") String token, @RequestParam(required = false) String relation,
+            @RequestParam(required = false) String conformance) {
+        Snippet.Status status = null;
+        if (conformance != null) {
+            status = Snippet.Status.valueOf(conformance);
+        }
+        Response<List<SnippetDetails>> response = snippetService.getAccessibleSnippets(token, relation, status);
         if (response.isError()) {
             return new ResponseEntity<>(response, HttpStatus.valueOf(response.getError().code()));
         }

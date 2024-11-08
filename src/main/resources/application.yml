@@ -8,7 +8,7 @@ spring:
   jpa:
     hibernate:
       ddl-auto: create-drop
-    show-sql: true
+    show-sql: false
     properties:
       hibernate:
         format_sql: false
@@ -24,6 +24,13 @@ spring:
           client-id: ${AUTH_CLIENT_ID}
           client-secret: ${AUTH_CLIENT_SECRET}
 stream:
-  lint.key: "lint"
+  redis:
+    stream:
+      lint:
+        key: "lint"
+      status:
+        key: "status"
+    consumer:
+      group: "snippet_service"
 auth0:
   audience: ${AUTH0_AUDIENCE}

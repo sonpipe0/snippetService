@@ -1,6 +1,5 @@
 package com.printScript.snippetService.entities;
 
-import java.util.ArrayList;
 import java.util.List;
 
 import jakarta.persistence.*;
@@ -30,20 +29,18 @@ public class Snippet {
     @Column(nullable = false)
     private String version;
 
+    @Column(nullable = false)
+    @Enumerated(EnumType.STRING)
+    private Status lintStatus;
+
+    @Column(nullable = false)
+    @Enumerated(EnumType.STRING)
+    private Status formatStatus;
+
     @OneToMany(mappedBy = "snippet", cascade = CascadeType.ALL)
     private List<Test> tests;
 
-    public List<String> getInvalidFields() {
-        List<String> invalidFields = new ArrayList<>();
-        if (title == null || title.isEmpty()) {
-            invalidFields.add("title");
-        }
-        if (language == null || language.isEmpty()) {
-            invalidFields.add("language");
-        }
-        if (version == null || version.isEmpty()) {
-            invalidFields.add("version");
-        }
-        return invalidFields;
+    public enum Status {
+        IN_PROGRESS, COMPLIANT, NON_COMPLIANT
     }
 }
