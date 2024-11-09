@@ -2,6 +2,7 @@ package com.printScript.snippetService.controllers;
 
 import static com.printScript.snippetService.utils.Utils.checkMediaType;
 
+import java.util.List;
 import java.util.logging.Logger;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,6 +13,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.printScript.snippetService.DTO.*;
+import com.printScript.snippetService.entities.Snippet;
 import com.printScript.snippetService.redis.LintProducerInterface;
 import com.printScript.snippetService.services.SnippetService;
 
@@ -125,6 +127,20 @@ public class SnippetController {
         return ResponseEntity.ok(response.getData());
     }
 
+    @GetMapping("/accessible")
+    public ResponseEntity<Response<List<SnippetDetails>>> getAccessibleSnippets(
+            @RequestHeader("Authorization") String token, @RequestParam(required = false) String relation,
+            @RequestParam(required = false) String conformance) {
+        Snippet.Status status = null;
+        if (conformance != null) {
+            status = Snippet.Status.valueOf(conformance);
+        }
+        Response<List<SnippetDetails>> response = snippetService.getAccessibleSnippets(token, relation, status);
+        if (response.isError()) {
+            return new ResponseEntity<>(response, HttpStatus.valueOf(response.getError().code()));
+        }
+        return new ResponseEntity<>(response, HttpStatus.OK);
+}
     @GetMapping("/download")
     public ResponseEntity<Object> downloadSnippet(@RequestParam String snippetId,
             @RequestHeader("Authorization") String token) {

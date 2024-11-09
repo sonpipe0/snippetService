@@ -2,6 +2,7 @@ package com.printScript.snippetService.services;
 
 import static com.printScript.snippetService.utils.Utils.*;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
@@ -181,7 +182,7 @@ public class SnippetService {
         Snippet.Status lintStatus = snippet.getLintStatus();
 
         SnippetDetails snippetDetails = new SnippetDetails(snippetId, snippet.getTitle(), snippet.getDescription(),
-                snippet.getLanguage(), version, code, lintStatus);
+                snippet.getLanguage(), version, lintStatus);
         return Response.withData(snippetDetails);
     }
 
@@ -282,5 +283,26 @@ public class SnippetService {
         formatPublishEvent.setType(ConfigPublishEvent.ConfigType.FORMAT);
 
         lintProducer.publishEvent(formatPublishEvent);
+    }
+
+    public Response<List<SnippetDetails>> getAccessibleSnippets(String token, String relation,
+            Snippet.Status lintStatus) {
+        Response<List<String>> relationshipsResponse = permissionsManagerHandler.getSnippetRelationships(token,
+                relation);
+        if (relationshipsResponse.isError()) {
+            return Response.withError(relationshipsResponse.getError());
+        }
+
+        List<String> relationships = relationshipsResponse.getData();
+        List<Snippet> snippets = lintStatus != null
+                ? snippetRepository.findByIdIn(relationships).stream().filter(snippet -> {
+                    return snippet.getLintStatus() == lintStatus;
+                }).toList()
+                : snippetRepository.findByIdIn(relationships);
+        List<SnippetDetails> snippetDetails = snippets.stream().map(snippet -> {
+            return new SnippetDetails(snippet.getId(), snippet.getTitle(), snippet.getDescription(),
+                    snippet.getLanguage(), snippet.getVersion(), snippet.getLintStatus());
+        }).toList();
+        return Response.withData(snippetDetails);
     }
 }
