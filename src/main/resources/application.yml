@@ -15,7 +15,7 @@ spring:
   data:
     redis:
       host: localhost
-      port: 6379
+      port: ${REDIS_PORT:6379}
   security:
     oauth2:
       resourceserver:
@@ -27,10 +27,10 @@ stream:
   redis:
     stream:
       lint:
-        key: "lint"
+        key: ${STREAM_LINT_KEY:lint}
       status:
-        key: "status"
+        key: ${STREAM_STATUS_KEY:status}
     consumer:
-      group: "snippet_service"
+      group: ${STREAM_CONSUMER_GROUP_SNIPPET:snippet-service}
 auth0:
   audience: ${AUTH0_AUDIENCE}

@@ -2,6 +2,7 @@ package com.printScript.snippetService.services;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.logging.Logger;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -41,6 +42,11 @@ public class FormatUpdateService {
         for (String snippet : snippets) {
             snippetRepository.findById(snippet).ifPresent(snippetEntity -> {
                 snippetEntity.setFormatStatus(Snippet.Status.IN_PROGRESS);
+                if (!Objects.equals(snippetEntity.getLanguage(), "printscript")) {
+                    snippetEntity.setFormatStatus(Snippet.Status.UNKNOWN);
+                    snippetRepository.save(snippetEntity);
+                    throw new RuntimeException("Invalid language");
+                }
                 snippetRepository.save(snippetEntity);
             });
             ConfigPublishEvent snippetEvent = new ConfigPublishEvent();
