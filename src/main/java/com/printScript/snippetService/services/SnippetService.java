@@ -158,7 +158,7 @@ public class SnippetService {
         return Response.withData("Snippet updated successfully");
     }
 
-    public Response<SnippetDetails> getSnippetDetails(String snippetId, String token) {
+    public Response<SnippetCodeDetails> getSnippetDetails(String snippetId, String token) {
         Optional<Snippet> snippetOpt = snippetRepository.findById(snippetId);
         if (snippetOpt.isEmpty()) {
             return Response.withError(new Error<>(404, "Snippet not found"));
@@ -181,8 +181,15 @@ public class SnippetService {
 
         Snippet.Status lintStatus = snippet.getLintStatus();
 
-        SnippetDetails snippetDetails = new SnippetDetails(snippetId, snippet.getTitle(), snippet.getDescription(),
-                snippet.getLanguage(), version, lintStatus);
+        SnippetCodeDetails snippetDetails = new SnippetCodeDetails();
+        snippetDetails.setCode(code);
+        snippetDetails.setLanguage(language);
+        snippetDetails.setVersion(version);
+        snippetDetails.setDescription(snippet.getDescription());
+        snippetDetails.setLintStatus(lintStatus);
+        snippetDetails.setId(snippetId);
+        snippetDetails.setTitle(snippet.getTitle());
+
         return Response.withData(snippetDetails);
     }
 

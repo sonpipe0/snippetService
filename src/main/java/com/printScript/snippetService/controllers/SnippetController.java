@@ -100,7 +100,7 @@ public class SnippetController {
     @GetMapping("/details")
     public ResponseEntity<Object> getSnippetDetails(@RequestParam String snippetId,
             @RequestHeader("Authorization") String token) {
-        Response<SnippetDetails> response = snippetService.getSnippetDetails(snippetId, token);
+        Response<SnippetCodeDetails> response = snippetService.getSnippetDetails(snippetId, token);
         if (response.isError()) {
             return new ResponseEntity<>(response.getError().body(), HttpStatusCode.valueOf(response.getError().code()));
         }
@@ -140,7 +140,8 @@ public class SnippetController {
             return new ResponseEntity<>(response, HttpStatus.valueOf(response.getError().code()));
         }
         return new ResponseEntity<>(response, HttpStatus.OK);
-}
+    }
+
     @GetMapping("/download")
     public ResponseEntity<Object> downloadSnippet(@RequestParam String snippetId,
             @RequestHeader("Authorization") String token) {
