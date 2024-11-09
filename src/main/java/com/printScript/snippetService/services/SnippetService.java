@@ -96,7 +96,7 @@ public class SnippetService {
         return Response.withData(snippetId);
     }
 
-    public Response<String> updateSnippet(UpdateSnippetDTO updateSnippetDTO, String token) {
+    public Response<Void> updateSnippet(UpdateSnippetDTO updateSnippetDTO, String token) {
         Set<ConstraintViolation<UpdateSnippetDTO>> violations = validation.validate(updateSnippetDTO);
         if (!violations.isEmpty()) {
             return Response.withError(getViolationsMessageError(violations));
@@ -116,11 +116,11 @@ public class SnippetService {
         Response<String> permissionsResponse = permissionsManagerHandler.checkPermissions(snippetId, token,
                 "/snippets/can-edit");
         if (permissionsResponse.isError())
-            return permissionsResponse;
+            return Response.withError(permissionsResponse.getError());
 
         Response<String> printScriptResponse = printScriptServiceHandler.validateCode(code, version, token);
         if (printScriptResponse.isError())
-            return printScriptResponse;
+            return Response.withError(printScriptResponse.getError());
         Snippet snippet = snippetOptional.get();
         snippet.setTitle(title);
         snippet.setDescription(updateSnippetDTO.getDescription());
@@ -135,7 +135,7 @@ public class SnippetService {
         }
 
         bucketHandler.put("snippets/" + snippetId, code, token);
-        return Response.withData("Snippet updated successfully");
+        return Response.withData(null);
     }
 
     public Response<SnippetDetails> getSnippetDetails(String snippetId, String token) {
@@ -174,7 +174,7 @@ public class SnippetService {
         return Response.withData(snippetDetails);
     }
 
-    public Response<String> shareSnippet(ShareSnippetDTO shareSnippetDTO, String token) {
+    public Response<Void> shareSnippet(ShareSnippetDTO shareSnippetDTO, String token) {
         Set<ConstraintViolation<ShareSnippetDTO>> violations = validation.validate(shareSnippetDTO);
         if (!violations.isEmpty()) {
             return Response.withError(getViolationsMessageError(violations));
@@ -183,15 +183,15 @@ public class SnippetService {
         Response<String> permissionsResponse = permissionsManagerHandler
                 .checkPermissions(shareSnippetDTO.getSnippetId(), token, "/snippets/has-access");
         if (permissionsResponse.isError())
-            return permissionsResponse;
+            return Response.withError(permissionsResponse.getError());
 
         Response<String> permissionsResponse2 = permissionsManagerHandler.shareSnippet(token, shareSnippetDTO,
                 "/snippets/save/share/relationship");
         if (permissionsResponse2.isError()) {
-            return permissionsResponse2;
+            return Response.withError(permissionsResponse2.getError());
         }
 
-        return Response.withData("Snippet shared successfully");
+        return Response.withData(null);
     }
 
     public void postToCyclon() {

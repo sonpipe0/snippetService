@@ -15,9 +15,14 @@ public class Test {
     @GeneratedValue(strategy = GenerationType.UUID)
     private String id;
 
-    @Lob
     @Column
-    private byte[] expectedOutput;
+    private String title;
+
+    @Column
+    private String inputs;
+
+    @Column
+    private String expectedOutputs;
 
     @ManyToOne
     @JoinColumn(name = "snippet_id")

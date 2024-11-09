@@ -1,6 +1,9 @@
 package com.printScript.snippetService.DTO;
 
+import java.util.List;
+
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -10,9 +13,15 @@ import lombok.Setter;
 @NoArgsConstructor
 public class TestDTO {
 
-    @NotBlank(message = "Test Id is required")
-    private String testId;
+    @NotBlank(message = "Id is required")
+    private String id;
 
-    @NotBlank(message = "Rest result is required")
-    private String testResult;
+    @NotBlank(message = "Title is required")
+    private String title;
+
+    @NotNull(message = "Input queue is required")
+    private List<String> inputQueue;
+
+    @NotNull(message = "Output queue is required")
+    private List<String> outputQueue;
 }
