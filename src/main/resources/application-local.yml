@@ -1,2 +1,8 @@
 server:
   port: 8080
+logging:
+  level:
+    root: INFO
+    com.printScript: INFO
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"

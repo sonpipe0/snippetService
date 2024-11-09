@@ -8,14 +8,14 @@ spring:
   jpa:
     hibernate:
       ddl-auto: create-drop
-    show-sql: true
+    show-sql: false
     properties:
       hibernate:
         format_sql: false
   data:
     redis:
       host: localhost
-      port: 6379
+      port: ${REDIS_PORT:6379}
   security:
     oauth2:
       resourceserver:
@@ -24,6 +24,13 @@ spring:
           client-id: ${AUTH_CLIENT_ID}
           client-secret: ${AUTH_CLIENT_SECRET}
 stream:
-  lint.key: "lint"
+  redis:
+    stream:
+      lint:
+        key: ${STREAM_LINT_KEY:lint}
+      status:
+        key: ${STREAM_STATUS_KEY:status}
+    consumer:
+      group: ${STREAM_CONSUMER_GROUP_SNIPPET:snippet-service}
 auth0:
   audience: ${AUTH0_AUDIENCE}

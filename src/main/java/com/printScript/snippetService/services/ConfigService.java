@@ -3,7 +3,6 @@ package com.printScript.snippetService.services;
 import static com.printScript.snippetService.utils.Utils.getViolationsMessageError;
 
 import java.io.IOException;
-import java.util.Optional;
 import java.util.Set;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,12 +31,17 @@ public class ConfigService {
     private BucketHandler bucketHandler;
 
     @Autowired
+    private LintUpdateService lintUpdateService;
+
+    @Autowired
+    private FormatUpdateService formatUpdateService;
+
+    private final Validator validation = Validation.buildDefaultValidatorFactory().getValidator();
+    @Autowired
     private LintingConfigRepository lintingConfigRepository;
 
     @Autowired
     private FormatConfigRepository formatConfigRepository;
-
-    private final Validator validation = Validation.buildDefaultValidatorFactory().getValidator();
 
     public Response<Void> putLintingConfig(LintingConfigDTO lintingConfigDTO, String userId, String token)
             throws IOException {
@@ -51,12 +55,8 @@ public class ConfigService {
         } catch (Exception e) {
             return Response.withError(new Error<>(500, "Internal Server Error"));
         }
-        LintConfig lintConfig = new LintConfig();
-        lintConfig.setId(userId);
-        lintConfig.setLanguage("printScript");
-        lintConfig.setVersion("1.1");
         try {
-            lintingConfigRepository.save(lintConfig);
+            lintUpdateService.sendLintMessages(userId, token);
             return Response.withData(null);
         } catch (Exception e) {
             return Response.withError(new Error<>(500, "Internal Server Error"));
@@ -65,10 +65,6 @@ public class ConfigService {
 
     public Response<LintingConfigDTO> getLintingConfig(String userId, String token) {
         try {
-            Optional<LintConfig> lintConfig = lintingConfigRepository.findById(userId);
-            if (lintConfig.isEmpty()) {
-                return Response.withError(new Error<>(404, "Not Found"));
-            }
             Response<String> response = bucketHandler.get("lint/" + userId, token);
             if (response.getError() != null) {
                 return Response.withError(response.getError());
@@ -86,13 +82,15 @@ public class ConfigService {
             lintingConfigDTO.setIdentifierFormat(LintingConfigDTO.IdentifierFormat.CAMEL_CASE);
             lintingConfigDTO.setRestrictPrintln(true);
             lintingConfigDTO.setRestrictReadInput(false);
-            LintConfig lintConfig = new LintConfig();
-            lintConfig.setId(userId);
-            lintConfig.setLanguage("printScript");
-            lintConfig.setVersion("1.1");
-            lintingConfigRepository.save(lintConfig);
             String lintJson = new LintSerializer().serialize(lintingConfigDTO);
             bucketHandler.put("lint/" + userId, lintJson, token);
+        } catch (Exception e) {
+            return Response.withError(new Error<>(500, "Internal Server Error"));
+        }
+        try {
+            LintConfig lintConfig = new LintConfig();
+            lintConfig.setId(userId);
+            lintingConfigRepository.save(lintConfig);
             return Response.withData(null);
         } catch (Exception e) {
             return Response.withError(new Error<>(500, "Internal Server Error"));
@@ -111,12 +109,8 @@ public class ConfigService {
         } catch (Exception e) {
             return Response.withError(new Error<>(500, "Internal Server Error"));
         }
-        FormatConfig formatConfig = new FormatConfig();
-        formatConfig.setId(userId);
-        formatConfig.setLanguage("printScript");
-        formatConfig.setVersion("1.1");
         try {
-            formatConfigRepository.save(formatConfig);
+            formatUpdateService.sendFormatMessages(userId, token);
             return Response.withData(null);
         } catch (Exception e) {
             return Response.withError(new Error<>(500, "Internal Server Error"));
@@ -125,10 +119,6 @@ public class ConfigService {
 
     public Response<FormatConfigDTO> getFormatConfig(String userId, String token) {
         try {
-            Optional<FormatConfig> formatConfig = formatConfigRepository.findById(userId);
-            if (formatConfig.isEmpty()) {
-                return Response.withError(new Error<>(404, "Not Found"));
-            }
             Response<String> response = bucketHandler.get("format/" + userId, token);
             if (response.getError() != null) {
                 return Response.withError(response.getError());
@@ -153,13 +143,15 @@ public class ConfigService {
             formatConfigDTO.setEnforceSpacingBetweenTokens(false);
             formatConfigDTO.setLinesBeforePrintln(0);
 
-            FormatConfig formatConfig = new FormatConfig();
-            formatConfig.setId(userId);
-            formatConfig.setLanguage("printScript");
-            formatConfig.setVersion("1.1");
-            formatConfigRepository.save(formatConfig);
             String formatJson = new FormatSerializer().serialize(formatConfigDTO);
             bucketHandler.put("format/" + userId, formatJson, token);
+        } catch (Exception e) {
+            return Response.withError(new Error<>(500, "Internal Server Error"));
+        }
+        try {
+            FormatConfig formatConfig = new FormatConfig();
+            formatConfig.setId(userId);
+            formatConfigRepository.save(formatConfig);
             return Response.withData(null);
         } catch (Exception e) {
             return Response.withError(new Error<>(500, "Internal Server Error"));
