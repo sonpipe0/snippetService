@@ -127,7 +127,7 @@ public class SnippetController {
         return ResponseEntity.ok(response.getData());
     }
 
-    @GetMapping("/accessible")
+    @GetMapping("/get/all")
     public ResponseEntity<Response<List<SnippetDetails>>> getAccessibleSnippets(
             @RequestHeader("Authorization") String token, @RequestParam(required = false) String relation,
             @RequestParam(required = false) String conformance) {
@@ -149,8 +149,7 @@ public class SnippetController {
         if (response.isError()) {
             return new ResponseEntity<>(response.getError().body(), HttpStatusCode.valueOf(response.getError().code()));
         }
-        return ResponseEntity.ok()
-                .header("Content-Disposition", "attachment; filename=" + response.getData().language())
+        return ResponseEntity.ok().header("Content-Disposition", "attachment; filename=" + response.getData().name())
                 .body(response.getData().code());
     }
 }

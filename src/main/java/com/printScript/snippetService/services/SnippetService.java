@@ -213,7 +213,7 @@ public class SnippetService {
         return Response.withData("Snippet shared successfully");
     }
 
-    public record Tuple(String code, String language) {
+    public record Tuple(String code, String name) {
     }
 
     public Response<Tuple> downloadSnippet(String snippetId, String token) {
@@ -234,7 +234,7 @@ public class SnippetService {
         if (response.isError())
             return Response.withError(response.getError());
 
-        Tuple tuple = new Tuple(response.getData(), snippet.getVersion());
+        Tuple tuple = new Tuple(response.getData(), snippet.getTitle().replace(" ", "_") + "." + language);
         return Response.withData(tuple);
     }
 
