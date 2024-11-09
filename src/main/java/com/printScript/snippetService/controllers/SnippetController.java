@@ -66,11 +66,11 @@ public class SnippetController {
     @PostMapping("/update")
     public ResponseEntity<Object> updateSnippet(@RequestBody UpdateSnippetDTO updateSnippetDTO,
             @RequestHeader("Authorization") String token) {
-        Response<String> response = snippetService.updateSnippet(updateSnippetDTO, token);
+        Response<Void> response = snippetService.updateSnippet(updateSnippetDTO, token);
         if (response.isError()) {
             return new ResponseEntity<>(response.getError().body(), HttpStatusCode.valueOf(response.getError().code()));
         }
-        return ResponseEntity.ok("Snippet updated successfully");
+        return ResponseEntity.ok().build();
     }
 
     @PostMapping("/update/file")
@@ -90,11 +90,11 @@ public class SnippetController {
         }
         UpdateSnippetDTO updateSnippetDTO = new UpdateSnippetDTO(code, snippetId, title, description, language,
                 version);
-        Response<String> response = snippetService.updateSnippet(updateSnippetDTO, token);
+        Response<Void> response = snippetService.updateSnippet(updateSnippetDTO, token);
         if (response.isError()) {
             return new ResponseEntity<>(response.getError().body(), HttpStatusCode.valueOf(response.getError().code()));
         }
-        return ResponseEntity.ok("Snippet updated successfully");
+        return ResponseEntity.ok().build();
     }
 
     @GetMapping("/details")
@@ -110,11 +110,11 @@ public class SnippetController {
     @PostMapping("/share")
     public ResponseEntity<Object> shareSnippet(@RequestBody ShareSnippetDTO shareSnippetDTO,
             @RequestHeader("Authorization") String token) {
-        Response<String> response = snippetService.shareSnippet(shareSnippetDTO, token);
+        Response<Void> response = snippetService.shareSnippet(shareSnippetDTO, token);
         if (response.isError()) {
             return new ResponseEntity<>(response.getError().body(), HttpStatusCode.valueOf(response.getError().code()));
         }
-        return ResponseEntity.ok("Snippet shared successfully");
+        return ResponseEntity.ok().build();
     }
 
     @GetMapping("/get/formatted")
