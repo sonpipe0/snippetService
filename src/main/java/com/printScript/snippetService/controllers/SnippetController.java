@@ -140,5 +140,16 @@ public class SnippetController {
             return new ResponseEntity<>(response, HttpStatus.valueOf(response.getError().code()));
         }
         return new ResponseEntity<>(response, HttpStatus.OK);
+}
+    @GetMapping("/download")
+    public ResponseEntity<Object> downloadSnippet(@RequestParam String snippetId,
+            @RequestHeader("Authorization") String token) {
+        Response<SnippetService.Tuple> response = snippetService.downloadSnippet(snippetId, token);
+        if (response.isError()) {
+            return new ResponseEntity<>(response.getError().body(), HttpStatusCode.valueOf(response.getError().code()));
+        }
+        return ResponseEntity.ok()
+                .header("Content-Disposition", "attachment; filename=" + response.getData().language())
+                .body(response.getData().code());
     }
 }

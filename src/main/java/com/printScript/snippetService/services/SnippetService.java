@@ -92,18 +92,19 @@ public class SnippetService {
             TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
             return permissionsResponse;
         }
-
-        Response<String> printScriptResponse = printScriptServiceHandler.validateCode(code, version, token);
-        if (printScriptResponse.isError()) {
-            TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
-            return printScriptResponse;
+        if (language.equals("printscript")) {
+            Response<String> printScriptResponse = printScriptServiceHandler.validateCode(code, version, token);
+            if (printScriptResponse.isError()) {
+                TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
+                return printScriptResponse;
+            }
         }
 
         Response<Void> response = bucketHandler.put("snippets/" + snippetId, code, token);
         if (response.isError())
             return Response.withError(response.getError());
 
-        generateEvents(token, snippetId, snippet);
+        generateEvents(token, snippetId, snippet, language);
 
         return Response.withData(snippetId);
     }
@@ -130,9 +131,11 @@ public class SnippetService {
         if (permissionsResponse.isError())
             return permissionsResponse;
 
-        Response<String> printScriptResponse = printScriptServiceHandler.validateCode(code, version, token);
-        if (printScriptResponse.isError())
-            return printScriptResponse;
+        if (language.equals("printscript")) {
+            Response<String> printScriptResponse = printScriptServiceHandler.validateCode(code, version, token);
+            if (printScriptResponse.isError())
+                return printScriptResponse;
+        }
         Snippet snippet = snippetOptional.get();
         snippet.setTitle(title);
         snippet.setDescription(updateSnippetDTO.getDescription());
@@ -150,7 +153,7 @@ public class SnippetService {
 
         bucketHandler.put("snippets/" + snippetId, code, token);
 
-        generateEvents(token, snippetId, snippet);
+        generateEvents(token, snippetId, snippet, language);
         snippetRepository.save(snippet);
         return Response.withData("Snippet updated successfully");
     }
@@ -203,6 +206,31 @@ public class SnippetService {
         return Response.withData("Snippet shared successfully");
     }
 
+    public record Tuple(String code, String language) {
+    }
+
+    public Response<Tuple> downloadSnippet(String snippetId, String token) {
+        Response<String> permissionsResponse = permissionsManagerHandler.checkPermissions(snippetId, token,
+                "/snippets/has-access");
+        if (permissionsResponse.isError())
+            return Response.withError(permissionsResponse.getError());
+
+        Snippet snippet = snippetRepository.findById(snippetId).orElse(null);
+        String language;
+        if (snippet == null)
+            return Response.withError(new Error<>(404, "Snippet not found"));
+        else {
+            language = snippet.getLanguage();
+        }
+
+        Response<String> response = bucketHandler.get("snippets/" + snippetId, token);
+        if (response.isError())
+            return Response.withError(response.getError());
+
+        Tuple tuple = new Tuple(response.getData(), snippet.getVersion());
+        return Response.withData(tuple);
+    }
+
     public Response<String> getFormattedFile(String snippetId, String token) {
         Response<String> permissionsResponse = permissionsManagerHandler.checkPermissions(snippetId, token,
                 "/snippets/has-access");
@@ -231,7 +259,13 @@ public class SnippetService {
         return Response.withData(response.getData());
     }
 
-    private void generateEvents(String token, String snippetId, Snippet snippet) {
+    private void generateEvents(String token, String snippetId, Snippet snippet, String language) {
+        if (!language.equals("printscript")) {
+            snippet.setFormatStatus(Snippet.Status.UNKNOWN);
+            snippet.setLintStatus(Snippet.Status.UNKNOWN);
+            snippetRepository.save(snippet);
+            return;
+        }
         ConfigPublishEvent lintPublishEvent = new ConfigPublishEvent();
         String userId = TokenUtils.decodeToken(token.substring(7)).get("userId");
         lintPublishEvent.setSnippetId(snippetId);

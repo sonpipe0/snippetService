@@ -2,6 +2,7 @@ package com.printScript.snippetService.services;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.logging.Logger;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -41,6 +42,11 @@ public class LintUpdateService {
         for (String snippet : snippets) {
             snippetRepository.findById(snippet).ifPresent(snippetEntity -> {
                 snippetEntity.setLintStatus(Snippet.Status.IN_PROGRESS);
+                if (!Objects.equals(snippetEntity.getLanguage(), "printscript")) {
+                    snippetEntity.setLintStatus(Snippet.Status.UNKNOWN);
+                    snippetRepository.save(snippetEntity);
+                    throw new RuntimeException("Invalid language");
+                }
                 snippetRepository.save(snippetEntity);
             });
             ConfigPublishEvent snippetEvent = new ConfigPublishEvent();
