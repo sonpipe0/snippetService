@@ -14,7 +14,7 @@ spring:
         format_sql: false
   data:
     redis:
-      host: localhost
+      host: ${REDIS_HOST:localhost}
       port: ${REDIS_PORT:6379}
   security:
     oauth2:
