@@ -12,7 +12,6 @@ spring:
     properties:
       hibernate:
         format_sql: false
-        dialect: pos
   data:
     redis:
       host: ${REDIS_HOST:localhost}
