@@ -6,9 +6,9 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.interceptor.TransactionAspectSupport;
 
@@ -18,7 +18,6 @@ import com.printScript.snippetService.errorDTO.Error;
 import com.printScript.snippetService.redis.LintProducerInterface;
 import com.printScript.snippetService.repositories.SnippetRepository;
 import com.printScript.snippetService.utils.TokenUtils;
-import com.printScript.snippetService.web.ConfigServiceWebHandler;
 import com.printScript.snippetService.web.handlers.BucketHandler;
 import com.printScript.snippetService.web.handlers.PermissionsManagerHandler;
 import com.printScript.snippetService.web.handlers.PrintScriptServiceHandler;
@@ -47,10 +46,6 @@ public class SnippetService {
     private final LintProducerInterface lintProducer;
 
     private final Validator validation = Validation.buildDefaultValidatorFactory().getValidator();
-
-    private static final Logger logger = LoggerFactory.getLogger(SnippetService.class);
-    @Autowired
-    private ConfigServiceWebHandler configServiceWebHandler;
 
     @Autowired
     public SnippetService(LintProducerInterface lintProducer) {
@@ -292,8 +287,8 @@ public class SnippetService {
         lintProducer.publishEvent(formatPublishEvent);
     }
 
-    public Response<List<SnippetDetails>> getAccessibleSnippets(String token, String relation,
-            Snippet.Status lintStatus) {
+    public Response<List<SnippetDetails>> getAccessibleSnippets(String token, String relation, Integer page,
+            Integer pageSize, String name) {
         Response<List<String>> relationshipsResponse = permissionsManagerHandler.getSnippetRelationships(token,
                 relation);
         if (relationshipsResponse.isError()) {
@@ -301,15 +296,20 @@ public class SnippetService {
         }
 
         List<String> relationships = relationshipsResponse.getData();
-        List<Snippet> snippets = lintStatus != null
-                ? snippetRepository.findByIdIn(relationships).stream().filter(snippet -> {
-                    return snippet.getLintStatus() == lintStatus;
-                }).toList()
-                : snippetRepository.findByIdIn(relationships);
-        List<SnippetDetails> snippetDetails = snippets.stream().map(snippet -> {
-            return new SnippetDetails(snippet.getId(), snippet.getTitle(), snippet.getDescription(),
-                    snippet.getLanguage(), snippet.getVersion(), snippet.getLintStatus());
-        }).toList();
+        Pageable pageable = PageRequest.of(page, pageSize);
+        List<Snippet> snippets = snippetRepository.findByIdInAndTitleStartingWith(relationships, name, pageable);
+        List<SnippetDetails> snippetDetails = snippets
+                .stream().map(snippet -> new SnippetDetails(snippet.getId(), snippet.getTitle(),
+                        snippet.getDescription(), snippet.getLanguage(), snippet.getVersion(), snippet.getLintStatus()))
+                .toList();
         return Response.withData(snippetDetails);
+    }
+
+    public Response<PaginatedUsers> getSnippetUsers(String token, String prefix, Integer page, Integer PageSize) {
+        Response<PaginatedUsers> response = permissionsManagerHandler.getSnippetUsers(token, prefix, page, PageSize);
+        if (response.isError()) {
+            return Response.withError(response.getError());
+        }
+        return response;
     }
 }

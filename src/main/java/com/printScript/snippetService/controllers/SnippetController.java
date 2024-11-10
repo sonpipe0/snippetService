@@ -3,7 +3,6 @@ package com.printScript.snippetService.controllers;
 import static com.printScript.snippetService.utils.Utils.checkMediaType;
 
 import java.util.List;
-import java.util.logging.Logger;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -13,15 +12,12 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.printScript.snippetService.DTO.*;
-import com.printScript.snippetService.entities.Snippet;
 import com.printScript.snippetService.redis.LintProducerInterface;
 import com.printScript.snippetService.services.SnippetService;
 
 @RestController
 @RequestMapping("/snippet")
 public class SnippetController {
-
-    private static final Logger logger = Logger.getLogger(SnippetController.class.getName());
 
     private final SnippetService snippetService;
 
@@ -74,9 +70,9 @@ public class SnippetController {
     }
 
     @PostMapping("/update/file")
-    public ResponseEntity<Object> updateSnippetFile(@RequestParam MultipartFile file, @RequestParam String userId,
-            @RequestParam String snippetId, @RequestParam String title, @RequestParam String description,
-            @RequestParam String language, @RequestParam String version, @RequestHeader("Authorization") String token) {
+    public ResponseEntity<Object> updateSnippetFile(@RequestParam MultipartFile file, @RequestParam String snippetId,
+            @RequestParam String title, @RequestParam String description, @RequestParam String language,
+            @RequestParam String version, @RequestHeader("Authorization") String token) {
         ResponseEntity<Object> mediaTypeCheck = checkMediaType(file.getContentType());
         if (mediaTypeCheck != null) {
             return mediaTypeCheck;
@@ -130,16 +126,23 @@ public class SnippetController {
     @GetMapping("/get/all")
     public ResponseEntity<Response<List<SnippetDetails>>> getAccessibleSnippets(
             @RequestHeader("Authorization") String token, @RequestParam(required = false) String relation,
-            @RequestParam(required = false) String conformance) {
-        Snippet.Status status = null;
-        if (conformance != null) {
-            status = Snippet.Status.valueOf(conformance);
-        }
-        Response<List<SnippetDetails>> response = snippetService.getAccessibleSnippets(token, relation, status);
+            @RequestParam Integer page, @RequestParam Integer pageSize, @RequestParam String prefix) {
+        Response<List<SnippetDetails>> response = snippetService.getAccessibleSnippets(token, relation, page, pageSize,
+                prefix);
         if (response.isError()) {
             return new ResponseEntity<>(response, HttpStatus.valueOf(response.getError().code()));
         }
         return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @GetMapping("/get/users")
+    public ResponseEntity<Object> getSnippetUsers(@RequestHeader("Authorization") String token,
+            @RequestParam String prefix, @RequestParam Integer page, @RequestParam Integer pageSize) {
+        Response<PaginatedUsers> response = snippetService.getSnippetUsers(token, prefix, page, pageSize);
+        if (response.isError()) {
+            return new ResponseEntity<>(response, HttpStatus.valueOf(response.getError().code()));
+        }
+        return new ResponseEntity<>(response.getData(), HttpStatus.OK);
     }
 
     @GetMapping("/download")

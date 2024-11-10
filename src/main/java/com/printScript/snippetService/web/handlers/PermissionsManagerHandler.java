@@ -85,4 +85,20 @@ public class PermissionsManagerHandler {
             return Response.withError(new Error<>(400, "Error parsing response"));
         }
     }
+
+    public Response<PaginatedUsers> getSnippetUsers(String token, String prefix, Integer page, Integer pageSize) {
+        HttpHeaders header = new HttpHeaders();
+        header.set("Authorization", token);
+        HttpEntity<Void> requestPermissions = new HttpEntity<>(header);
+        try {
+            String response = getRequest(permissionsWebClient, "user/paginated", requestPermissions, String.class,
+                    Map.of("page", page.toString(), "pageSize", pageSize.toString(), "prefix", prefix));
+            PaginatedUsers paginatedUsers = objectMapper.readValue(response, PaginatedUsers.class);
+            return Response.withData(paginatedUsers);
+        } catch (HttpClientErrorException e) {
+            return Response.withError(new Error<>(e.getStatusCode().value(), e.getResponseBodyAsString()));
+        } catch (JsonProcessingException e) {
+            return Response.withError(new Error<>(400, "Error parsing response"));
+        }
+    }
 }
