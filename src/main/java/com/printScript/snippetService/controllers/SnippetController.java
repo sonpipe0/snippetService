@@ -2,7 +2,7 @@ package com.printScript.snippetService.controllers;
 
 import static com.printScript.snippetService.utils.Utils.checkMediaType;
 
-import java.util.logging.Logger;
+import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -18,8 +18,6 @@ import com.printScript.snippetService.services.SnippetService;
 @RestController
 @RequestMapping("/snippet")
 public class SnippetController {
-
-    private static final Logger logger = Logger.getLogger(SnippetController.class.getName());
 
     private final SnippetService snippetService;
 
@@ -64,17 +62,17 @@ public class SnippetController {
     @PostMapping("/update")
     public ResponseEntity<Object> updateSnippet(@RequestBody UpdateSnippetDTO updateSnippetDTO,
             @RequestHeader("Authorization") String token) {
-        Response<String> response = snippetService.updateSnippet(updateSnippetDTO, token);
+        Response<Void> response = snippetService.updateSnippet(updateSnippetDTO, token);
         if (response.isError()) {
             return new ResponseEntity<>(response.getError().body(), HttpStatusCode.valueOf(response.getError().code()));
         }
-        return ResponseEntity.ok("Snippet updated successfully");
+        return ResponseEntity.ok().build();
     }
 
     @PostMapping("/update/file")
-    public ResponseEntity<Object> updateSnippetFile(@RequestParam MultipartFile file, @RequestParam String userId,
-            @RequestParam String snippetId, @RequestParam String title, @RequestParam String description,
-            @RequestParam String language, @RequestParam String version, @RequestHeader("Authorization") String token) {
+    public ResponseEntity<Object> updateSnippetFile(@RequestParam MultipartFile file, @RequestParam String snippetId,
+            @RequestParam String title, @RequestParam String description, @RequestParam String language,
+            @RequestParam String version, @RequestHeader("Authorization") String token) {
         ResponseEntity<Object> mediaTypeCheck = checkMediaType(file.getContentType());
         if (mediaTypeCheck != null) {
             return mediaTypeCheck;
@@ -88,17 +86,18 @@ public class SnippetController {
         }
         UpdateSnippetDTO updateSnippetDTO = new UpdateSnippetDTO(code, snippetId, title, description, language,
                 version);
-        Response<String> response = snippetService.updateSnippet(updateSnippetDTO, token);
+        Response<Void> response = snippetService.updateSnippet(updateSnippetDTO, token);
         if (response.isError()) {
             return new ResponseEntity<>(response.getError().body(), HttpStatusCode.valueOf(response.getError().code()));
         }
-        return ResponseEntity.ok("Snippet updated successfully");
+        return ResponseEntity.ok().build();
     }
 
     @GetMapping("/details")
     public ResponseEntity<Object> getSnippetDetails(@RequestParam String snippetId,
             @RequestHeader("Authorization") String token) {
-        Response<SnippetDetails> response = snippetService.getSnippetDetails(snippetId, token);
+        Response<SnippetCodeDetails> response = snippetService.getSnippetDetails(snippetId, token);
+        System.out.println("response: " + response);
         if (response.isError()) {
             return new ResponseEntity<>(response.getError().body(), HttpStatusCode.valueOf(response.getError().code()));
         }
@@ -108,11 +107,11 @@ public class SnippetController {
     @PostMapping("/share")
     public ResponseEntity<Object> shareSnippet(@RequestBody ShareSnippetDTO shareSnippetDTO,
             @RequestHeader("Authorization") String token) {
-        Response<String> response = snippetService.shareSnippet(shareSnippetDTO, token);
+        Response<Void> response = snippetService.shareSnippet(shareSnippetDTO, token);
         if (response.isError()) {
             return new ResponseEntity<>(response.getError().body(), HttpStatusCode.valueOf(response.getError().code()));
         }
-        return ResponseEntity.ok("Snippet shared successfully");
+        return ResponseEntity.ok().build();
     }
 
     @GetMapping("/get/formatted")
@@ -123,5 +122,38 @@ public class SnippetController {
             return new ResponseEntity<>(response.getError().body(), HttpStatusCode.valueOf(response.getError().code()));
         }
         return ResponseEntity.ok(response.getData());
+    }
+
+    @GetMapping("/get/all")
+    public ResponseEntity<Object> getAccessibleSnippets(@RequestHeader("Authorization") String token,
+            @RequestParam(required = false) String relation, @RequestParam Integer page,
+            @RequestParam Integer page_size, @RequestParam String prefix) {
+        Response<List<SnippetCodeDetails>> response = snippetService.getAccessibleSnippets(token, relation, page,
+                page_size, prefix);
+        if (response.isError()) {
+            return new ResponseEntity<>(response.getError().body(), HttpStatusCode.valueOf(response.getError().code()));
+        }
+        return new ResponseEntity<>(response.getData(), HttpStatus.OK);
+    }
+
+    @GetMapping("/get/users")
+    public ResponseEntity<Object> getSnippetUsers(@RequestHeader("Authorization") String token,
+            @RequestParam String prefix, @RequestParam Integer page, @RequestParam Integer page_size) {
+        Response<PaginatedUsers> response = snippetService.getSnippetUsers(token, prefix, page, page_size);
+        if (response.isError()) {
+            return new ResponseEntity<>(response, HttpStatus.valueOf(response.getError().code()));
+        }
+        return new ResponseEntity<>(response.getData(), HttpStatus.OK);
+    }
+
+    @GetMapping("/download")
+    public ResponseEntity<Object> downloadSnippet(@RequestParam String snippetId,
+            @RequestHeader("Authorization") String token) {
+        Response<SnippetService.Tuple> response = snippetService.downloadSnippet(snippetId, token);
+        if (response.isError()) {
+            return new ResponseEntity<>(response.getError().body(), HttpStatusCode.valueOf(response.getError().code()));
+        }
+        return ResponseEntity.ok().header("Content-Disposition", "attachment; filename=" + response.getData().name())
+                .body(response.getData().code());
     }
 }

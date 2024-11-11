@@ -27,7 +27,7 @@ public class Snippet {
     private String language;
 
     @Column(nullable = false)
-    private String version;
+    private String extension;
 
     @Column(nullable = false)
     @Enumerated(EnumType.STRING)
@@ -41,6 +41,6 @@ public class Snippet {
     private List<Test> tests;
 
     public enum Status {
-        IN_PROGRESS, COMPLIANT, NON_COMPLIANT
+        IN_PROGRESS, COMPLIANT, NON_COMPLIANT, UNKNOWN
     }
 }

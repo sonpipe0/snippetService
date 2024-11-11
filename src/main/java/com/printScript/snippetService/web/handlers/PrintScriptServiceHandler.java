@@ -16,6 +16,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.printScript.snippetService.DTO.Lint;
 import com.printScript.snippetService.DTO.Response;
+import com.printScript.snippetService.DTO.TestData;
 import com.printScript.snippetService.DTO.Validation;
 import com.printScript.snippetService.errorDTO.Error;
 import com.printScript.snippetService.errorDTO.ErrorMessage;
@@ -72,6 +73,20 @@ public class PrintScriptServiceHandler {
             } catch (JsonProcessingException ex) {
                 return Response.withError(new Error<>(500, errors));
             }
+        }
+    }
+
+    public Response<Void> executeTest(String snippetId, String version, List<String> inputs, List<String> expected,
+            String token) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("Authorization", token);
+        HttpEntity<TestData> requestPrintScript = new HttpEntity<>(new TestData(snippetId, version, inputs, expected),
+                headers);
+        try {
+            postRequest(printScriptWebClient, "/runner/test", requestPrintScript, Void.class);
+            return Response.withData(null);
+        } catch (HttpClientErrorException e) {
+            return Response.withError(new Error<>(e.getStatusCode().value(), e.getResponseBodyAsString()));
         }
     }
 }

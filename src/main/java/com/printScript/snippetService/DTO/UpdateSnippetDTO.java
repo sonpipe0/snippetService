@@ -21,19 +21,19 @@ public class UpdateSnippetDTO {
     @NotBlank(message = "Language is required")
     private String language;
 
-    @NotBlank(message = "Version is required")
-    private String version;
+    @NotBlank(message = "Extension is required")
+    private String extension;
 
     @NotBlank(message = "Code is required")
     private String code;
 
     public UpdateSnippetDTO(String code, String snippetId, String title, String description, String language,
-            String version) {
+            String extension) {
         this.snippetId = snippetId;
         this.title = title;
         this.description = description;
         this.language = language;
-        this.version = version;
+        this.extension = extension;
         this.code = code;
     }
 }

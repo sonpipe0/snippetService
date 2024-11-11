@@ -3,6 +3,7 @@ package com.printScript.snippetService.web.handlers;
 import static com.printScript.snippetService.web.RequestExecutor.getRequest;
 import static com.printScript.snippetService.web.RequestExecutor.postRequest;
 
+import java.util.List;
 import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,6 +13,9 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.printScript.snippetService.DTO.*;
 import com.printScript.snippetService.errorDTO.Error;
 import com.printScript.snippetService.services.RestTemplateService;
@@ -20,10 +24,12 @@ import com.printScript.snippetService.services.RestTemplateService;
 public class PermissionsManagerHandler {
 
     private final RestTemplate permissionsWebClient;
+    private final ObjectMapper objectMapper;
 
     @Autowired
-    public PermissionsManagerHandler(RestTemplateService permissionsRestTemplate) {
+    public PermissionsManagerHandler(RestTemplateService permissionsRestTemplate, ObjectMapper objectMapper) {
         this.permissionsWebClient = permissionsRestTemplate.getRestTemplate();
+        this.objectMapper = objectMapper;
     }
 
     public Response<String> saveRelation(String token, String snippetId, String path) {
@@ -60,6 +66,39 @@ public class PermissionsManagerHandler {
             return Response.withData(null);
         } catch (HttpClientErrorException e) {
             return Response.withError(new Error<>(e.getStatusCode().value(), e.getResponseBodyAsString()));
+        }
+    }
+
+    public Response<List<SnippetPermissionGrantResponse>> getSnippetRelationships(String token, String filterType) {
+        HttpHeaders header = new HttpHeaders();
+        header.set("Authorization", token);
+        HttpEntity<Void> requestPermissions = new HttpEntity<>(header);
+        try {
+            String response = getRequest(permissionsWebClient, "snippets/get/relationships", requestPermissions,
+                    String.class, Map.of("filterType", filterType));
+            List<SnippetPermissionGrantResponse> snippetIds = objectMapper.readValue(response, new TypeReference<>() {
+            });
+            return Response.withData(snippetIds);
+        } catch (HttpClientErrorException e) {
+            return Response.withError(new Error<>(e.getStatusCode().value(), e.getResponseBodyAsString()));
+        } catch (JsonProcessingException e) {
+            return Response.withError(new Error<>(400, "Error parsing response"));
+        }
+    }
+
+    public Response<PaginatedUsers> getSnippetUsers(String token, String prefix, Integer page, Integer pageSize) {
+        HttpHeaders header = new HttpHeaders();
+        header.set("Authorization", token);
+        HttpEntity<Void> requestPermissions = new HttpEntity<>(header);
+        try {
+            String response = getRequest(permissionsWebClient, "user/paginated", requestPermissions, String.class,
+                    Map.of("page", page.toString(), "pageSize", pageSize.toString(), "prefix", prefix));
+            PaginatedUsers paginatedUsers = objectMapper.readValue(response, PaginatedUsers.class);
+            return Response.withData(paginatedUsers);
+        } catch (HttpClientErrorException e) {
+            return Response.withError(new Error<>(e.getStatusCode().value(), e.getResponseBodyAsString()));
+        } catch (JsonProcessingException e) {
+            return Response.withError(new Error<>(400, "Error parsing response"));
         }
     }
 }
