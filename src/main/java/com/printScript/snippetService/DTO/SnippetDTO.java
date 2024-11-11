@@ -16,17 +16,17 @@ public class SnippetDTO {
     @NotBlank(message = "Language is required")
     private String language;
 
-    @NotBlank(message = "Version is required")
-    private String version;
+    @NotBlank(message = "Extension is required")
+    private String extension;
 
     @NotBlank(message = "Code is required")
     private String code;
 
-    public SnippetDTO(String code, String title, String description, String language, String version) {
+    public SnippetDTO(String code, String title, String description, String language, String extension) {
         this.title = title;
         this.description = description;
         this.language = language;
-        this.version = version;
+        this.extension = extension;
         this.code = code;
     }
 }

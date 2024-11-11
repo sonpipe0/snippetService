@@ -10,11 +10,12 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 public class SnippetCodeDetails {
+    private String author;
     private String id;
     private String title;
     private String description;
     private String language;
-    private String version;
+    private String extension;
     private String code;
     private Snippet.Status lintStatus;
 }

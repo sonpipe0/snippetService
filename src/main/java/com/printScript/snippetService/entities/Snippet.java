@@ -27,7 +27,7 @@ public class Snippet {
     private String language;
 
     @Column(nullable = false)
-    private String version;
+    private String extension;
 
     @Column(nullable = false)
     @Enumerated(EnumType.STRING)

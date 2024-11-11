@@ -61,14 +61,14 @@ public class SnippetService {
 
         String title = snippetDTO.getTitle();
         String language = snippetDTO.getLanguage();
-        String version = snippetDTO.getVersion();
+        String extension = snippetDTO.getExtension();
         String code = snippetDTO.getCode();
 
         Snippet snippet = new Snippet();
         snippet.setTitle(title);
         snippet.setDescription(snippetDTO.getDescription());
         snippet.setLanguage(language);
-        snippet.setVersion(version);
+        snippet.setExtension(extension);
         snippet.setLintStatus(Snippet.Status.IN_PROGRESS);
         snippet.setFormatStatus(Snippet.Status.IN_PROGRESS);
 
@@ -88,7 +88,7 @@ public class SnippetService {
             return permissionsResponse;
         }
         if (language.equals("printscript")) {
-            Response<String> printScriptResponse = printScriptServiceHandler.validateCode(code, version, token);
+            Response<String> printScriptResponse = printScriptServiceHandler.validateCode(code, "1.1", token);
             if (printScriptResponse.isError()) {
                 TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
                 return printScriptResponse;
@@ -113,7 +113,7 @@ public class SnippetService {
         String snippetId = updateSnippetDTO.getSnippetId();
         String title = updateSnippetDTO.getTitle();
         String language = updateSnippetDTO.getLanguage();
-        String version = updateSnippetDTO.getVersion();
+        String extension = updateSnippetDTO.getExtension();
         String code = updateSnippetDTO.getCode();
 
         Optional<Snippet> snippetOptional = snippetRepository.findById(snippetId);
@@ -127,7 +127,7 @@ public class SnippetService {
             return Response.withError(permissionsResponse.getError());
 
         if (language.equals("printscript")) {
-            Response<String> printScriptResponse = printScriptServiceHandler.validateCode(code, version, token);
+            Response<String> printScriptResponse = printScriptServiceHandler.validateCode(code, "1.1", token);
             if (printScriptResponse.isError())
                 return Response.withError(printScriptResponse.getError());
         }
@@ -135,7 +135,7 @@ public class SnippetService {
         snippet.setTitle(title);
         snippet.setDescription(updateSnippetDTO.getDescription());
         snippet.setLanguage(language);
-        snippet.setVersion(version);
+        snippet.setExtension(extension);
         snippet.setLintStatus(Snippet.Status.IN_PROGRESS);
         snippet.setFormatStatus(Snippet.Status.IN_PROGRESS);
 
@@ -171,7 +171,7 @@ public class SnippetService {
             return Response.withError(response.getError());
 
         String code = response.getData();
-        String version = snippet.getVersion();
+        String extension = snippet.getExtension();
         String language = snippet.getLanguage();
 
         Snippet.Status lintStatus = snippet.getLintStatus();
@@ -179,7 +179,7 @@ public class SnippetService {
         SnippetCodeDetails snippetDetails = new SnippetCodeDetails();
         snippetDetails.setCode(code);
         snippetDetails.setLanguage(language);
-        snippetDetails.setVersion(version);
+        snippetDetails.setExtension(extension);
         snippetDetails.setDescription(snippet.getDescription());
         snippetDetails.setLintStatus(lintStatus);
         snippetDetails.setId(snippetId);
@@ -218,18 +218,18 @@ public class SnippetService {
             return Response.withError(permissionsResponse.getError());
 
         Snippet snippet = snippetRepository.findById(snippetId).orElse(null);
-        String language;
+        String extension;
         if (snippet == null)
             return Response.withError(new Error<>(404, "Snippet not found"));
         else {
-            language = snippet.getLanguage();
+            extension = snippet.getExtension();
         }
 
         Response<String> response = bucketHandler.get("snippets/" + snippetId, token);
         if (response.isError())
             return Response.withError(response.getError());
 
-        Tuple tuple = new Tuple(response.getData(), snippet.getTitle().replace(" ", "_") + "." + language);
+        Tuple tuple = new Tuple(response.getData(), snippet.getTitle().replace(" ", "_") + "." + extension);
         return Response.withData(tuple);
     }
 
@@ -287,21 +287,38 @@ public class SnippetService {
         lintProducer.publishEvent(formatPublishEvent);
     }
 
-    public Response<List<SnippetDetails>> getAccessibleSnippets(String token, String relation, Integer page,
+    public Response<List<SnippetCodeDetails>> getAccessibleSnippets(String token, String relation, Integer page,
             Integer pageSize, String name) {
-        Response<List<String>> relationshipsResponse = permissionsManagerHandler.getSnippetRelationships(token,
-                relation);
+        Response<List<SnippetPermissionGrantResponse>> relationshipsResponse = permissionsManagerHandler
+                .getSnippetRelationships(token, relation);
         if (relationshipsResponse.isError()) {
             return Response.withError(relationshipsResponse.getError());
         }
 
-        List<String> relationships = relationshipsResponse.getData();
+        List<SnippetPermissionGrantResponse> relationships = relationshipsResponse.getData();
+        System.out.println(relationships);
         Pageable pageable = PageRequest.of(page, pageSize);
-        List<Snippet> snippets = snippetRepository.findByIdInAndTitleStartingWith(relationships, name, pageable);
-        List<SnippetDetails> snippetDetails = snippets
-                .stream().map(snippet -> new SnippetDetails(snippet.getId(), snippet.getTitle(),
-                        snippet.getDescription(), snippet.getLanguage(), snippet.getVersion(), snippet.getLintStatus()))
-                .toList();
+        List<Snippet> snippets = snippetRepository.findByIdInAndTitleStartingWith(
+                relationships.stream().map(SnippetPermissionGrantResponse::getSnippetId).toList(), name, pageable);
+        System.out.println(snippets);
+        List<SnippetCodeDetails> snippetDetails = snippets.stream().map(snippet -> {
+            SnippetCodeDetails snippetDetail = new SnippetCodeDetails();
+            String code = bucketHandler.get("snippets/" + snippet.getId(), token).getData();
+            snippetDetail.setId(snippet.getId());
+            snippetDetail.setTitle(snippet.getTitle());
+            snippetDetail.setCode(code);
+            snippetDetail.setDescription(snippet.getDescription());
+            snippetDetail.setLanguage(snippet.getLanguage());
+            snippetDetail.setExtension(snippet.getExtension());
+            snippetDetail.setLintStatus(snippet.getLintStatus());
+
+            // Find the author from relationships
+            String author = relationships.stream().filter(rel -> rel.getSnippetId().equals(snippet.getId()))
+                    .map(SnippetPermissionGrantResponse::getAuthor).findFirst().orElse(null);
+            snippetDetail.setAuthor(author);
+
+            return snippetDetail;
+        }).toList();
         return Response.withData(snippetDetails);
     }
 

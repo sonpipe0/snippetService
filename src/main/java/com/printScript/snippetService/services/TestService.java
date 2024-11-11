@@ -169,11 +169,10 @@ public class TestService {
         if (permissionsResponse.isError())
             return Response.withError(permissionsResponse.getError());
 
-        String version = snippet.getVersion();
         List<String> inputs = List.of(test.get().getInputs().split(","));
         List<String> expectedOutputs = List.of(test.get().getExpectedOutputs().split(","));
 
-        Response<Void> printScriptResponse = printScriptServiceHandler.executeTest(snippetId, version, inputs,
+        Response<Void> printScriptResponse = printScriptServiceHandler.executeTest(snippetId, "1.1", inputs,
                 expectedOutputs, token);
         if (printScriptResponse.isError())
             return Response.withError(printScriptResponse.getError());

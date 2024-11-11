@@ -69,14 +69,14 @@ public class PermissionsManagerHandler {
         }
     }
 
-    public Response<List<String>> getSnippetRelationships(String token, String filterType) {
+    public Response<List<SnippetPermissionGrantResponse>> getSnippetRelationships(String token, String filterType) {
         HttpHeaders header = new HttpHeaders();
         header.set("Authorization", token);
         HttpEntity<Void> requestPermissions = new HttpEntity<>(header);
         try {
             String response = getRequest(permissionsWebClient, "snippets/get/relationships", requestPermissions,
                     String.class, Map.of("filterType", filterType));
-            List<String> snippetIds = objectMapper.readValue(response, new TypeReference<>() {
+            List<SnippetPermissionGrantResponse> snippetIds = objectMapper.readValue(response, new TypeReference<>() {
             });
             return Response.withData(snippetIds);
         } catch (HttpClientErrorException e) {

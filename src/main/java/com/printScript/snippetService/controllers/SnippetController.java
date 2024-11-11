@@ -97,6 +97,7 @@ public class SnippetController {
     public ResponseEntity<Object> getSnippetDetails(@RequestParam String snippetId,
             @RequestHeader("Authorization") String token) {
         Response<SnippetCodeDetails> response = snippetService.getSnippetDetails(snippetId, token);
+        System.out.println("response: " + response);
         if (response.isError()) {
             return new ResponseEntity<>(response.getError().body(), HttpStatusCode.valueOf(response.getError().code()));
         }
@@ -124,21 +125,21 @@ public class SnippetController {
     }
 
     @GetMapping("/get/all")
-    public ResponseEntity<Response<List<SnippetDetails>>> getAccessibleSnippets(
-            @RequestHeader("Authorization") String token, @RequestParam(required = false) String relation,
-            @RequestParam Integer page, @RequestParam Integer pageSize, @RequestParam String prefix) {
-        Response<List<SnippetDetails>> response = snippetService.getAccessibleSnippets(token, relation, page, pageSize,
-                prefix);
+    public ResponseEntity<Object> getAccessibleSnippets(@RequestHeader("Authorization") String token,
+            @RequestParam(required = false) String relation, @RequestParam Integer page,
+            @RequestParam Integer page_size, @RequestParam String prefix) {
+        Response<List<SnippetCodeDetails>> response = snippetService.getAccessibleSnippets(token, relation, page,
+                page_size, prefix);
         if (response.isError()) {
-            return new ResponseEntity<>(response, HttpStatus.valueOf(response.getError().code()));
+            return new ResponseEntity<>(response.getError().body(), HttpStatusCode.valueOf(response.getError().code()));
         }
-        return new ResponseEntity<>(response, HttpStatus.OK);
+        return new ResponseEntity<>(response.getData(), HttpStatus.OK);
     }
 
     @GetMapping("/get/users")
     public ResponseEntity<Object> getSnippetUsers(@RequestHeader("Authorization") String token,
-            @RequestParam String prefix, @RequestParam Integer page, @RequestParam Integer pageSize) {
-        Response<PaginatedUsers> response = snippetService.getSnippetUsers(token, prefix, page, pageSize);
+            @RequestParam String prefix, @RequestParam Integer page, @RequestParam Integer page_size) {
+        Response<PaginatedUsers> response = snippetService.getSnippetUsers(token, prefix, page, page_size);
         if (response.isError()) {
             return new ResponseEntity<>(response, HttpStatus.valueOf(response.getError().code()));
         }
