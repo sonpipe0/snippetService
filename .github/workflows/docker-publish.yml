@@ -68,7 +68,7 @@ jobs:
           ssh-private-key: ${{ secrets.VM_STABLE }}
 
       - name: Run Script on Azure VM
-        if: github.ref == 'refs/heads/master'
+        if: github.ref == 'refs/heads/dev'
         run: |
           ssh -v -o StrictHostKeyChecking=no sonpipe@${{ secrets.VM_DEV_IP }} << 'ENDSSH'
           cd micro-infra
@@ -78,7 +78,7 @@ jobs:
       - name: Run Script on Azure VM Stable
         if: github.ref == 'refs/heads/master'
         run: |
-          ssh -v -o StrictHostKeyChecking=no sonpipe@${{ secrets.VM_DEV_IP }} << 'ENDSSH'
+          ssh -v -o StrictHostKeyChecking=no sonpipe@${{ secrets.VM_STABLE_IP }} << 'ENDSSH'
           cd micro-infra
           bash update-dev.sh
           ENDSSH
