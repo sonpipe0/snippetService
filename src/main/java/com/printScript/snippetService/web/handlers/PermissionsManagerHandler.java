@@ -101,4 +101,17 @@ public class PermissionsManagerHandler {
             return Response.withError(new Error<>(400, "Error parsing response"));
         }
     }
+
+    public Response<String> getSnippetAuthor(String snippetId, String token) {
+        HttpHeaders header = new HttpHeaders();
+        header.set("Authorization", token);
+        HttpEntity<Void> requestPermissions = new HttpEntity<>(header);
+        try {
+            String response = getRequest(permissionsWebClient, "snippets/get/author", requestPermissions, String.class,
+                    Map.of("snippetId", snippetId));
+            return Response.withData(response);
+        } catch (HttpClientErrorException e) {
+            return Response.withError(new Error<>(e.getStatusCode().value(), e.getResponseBodyAsString()));
+        }
+    }
 }

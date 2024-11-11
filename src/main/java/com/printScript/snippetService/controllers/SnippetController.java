@@ -14,6 +14,7 @@ import org.springframework.web.multipart.MultipartFile;
 import com.printScript.snippetService.DTO.*;
 import com.printScript.snippetService.redis.LintProducerInterface;
 import com.printScript.snippetService.services.SnippetService;
+import com.printScript.snippetService.utils.TokenUtils;
 
 @RestController
 @RequestMapping("/snippet")
@@ -29,7 +30,7 @@ public class SnippetController {
     @PostMapping("/save")
     public ResponseEntity<Object> saveSnippet(@RequestBody SnippetDTO snippetDTO,
             @RequestHeader("Authorization") String token) {
-        Response<String> response = snippetService.saveSnippet(snippetDTO, token);
+        Response<SnippetCodeDetails> response = snippetService.saveSnippet(snippetDTO, token);
         if (response.isError()) {
             return new ResponseEntity<>(response.getError().body(), HttpStatusCode.valueOf(response.getError().code()));
         }
@@ -52,7 +53,7 @@ public class SnippetController {
             return new ResponseEntity<>(e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
         SnippetDTO snippetDTO = new SnippetDTO(code, title, description, language, version);
-        Response<String> response = snippetService.saveSnippet(snippetDTO, token);
+        Response<SnippetCodeDetails> response = snippetService.saveSnippet(snippetDTO, token);
         if (response.isError()) {
             return new ResponseEntity<>(response.getError().body(), HttpStatusCode.valueOf(response.getError().code()));
         }
@@ -62,11 +63,11 @@ public class SnippetController {
     @PostMapping("/update")
     public ResponseEntity<Object> updateSnippet(@RequestBody UpdateSnippetDTO updateSnippetDTO,
             @RequestHeader("Authorization") String token) {
-        Response<Void> response = snippetService.updateSnippet(updateSnippetDTO, token);
+        Response<SnippetCodeDetails> response = snippetService.updateSnippet(updateSnippetDTO, token);
         if (response.isError()) {
             return new ResponseEntity<>(response.getError().body(), HttpStatusCode.valueOf(response.getError().code()));
         }
-        return ResponseEntity.ok().build();
+        return ResponseEntity.ok(response.getData());
     }
 
     @PostMapping("/update/file")
@@ -86,11 +87,11 @@ public class SnippetController {
         }
         UpdateSnippetDTO updateSnippetDTO = new UpdateSnippetDTO(code, snippetId, title, description, language,
                 version);
-        Response<Void> response = snippetService.updateSnippet(updateSnippetDTO, token);
+        Response<SnippetCodeDetails> response = snippetService.updateSnippet(updateSnippetDTO, token);
         if (response.isError()) {
             return new ResponseEntity<>(response.getError().body(), HttpStatusCode.valueOf(response.getError().code()));
         }
-        return ResponseEntity.ok().build();
+        return ResponseEntity.ok(response.getData());
     }
 
     @GetMapping("/details")
@@ -107,11 +108,11 @@ public class SnippetController {
     @PostMapping("/share")
     public ResponseEntity<Object> shareSnippet(@RequestBody ShareSnippetDTO shareSnippetDTO,
             @RequestHeader("Authorization") String token) {
-        Response<Void> response = snippetService.shareSnippet(shareSnippetDTO, token);
+        Response<SnippetCodeDetails> response = snippetService.shareSnippet(shareSnippetDTO, token);
         if (response.isError()) {
             return new ResponseEntity<>(response.getError().body(), HttpStatusCode.valueOf(response.getError().code()));
         }
-        return ResponseEntity.ok().build();
+        return ResponseEntity.ok(response.getData());
     }
 
     @GetMapping("/get/formatted")
@@ -140,10 +141,16 @@ public class SnippetController {
     public ResponseEntity<Object> getSnippetUsers(@RequestHeader("Authorization") String token,
             @RequestParam String prefix, @RequestParam Integer page, @RequestParam Integer page_size) {
         Response<PaginatedUsers> response = snippetService.getSnippetUsers(token, prefix, page, page_size);
+        String userId = TokenUtils.decodeToken(token.substring(7)).get("userId");
         if (response.isError()) {
-            return new ResponseEntity<>(response, HttpStatus.valueOf(response.getError().code()));
+            return new ResponseEntity<>(response.getError().body(), HttpStatus.valueOf(response.getError().code()));
         }
-        return new ResponseEntity<>(response.getData(), HttpStatus.OK);
+        PaginatedUsers paginatedUsers = response.getData();
+        List<User> filteredUsers = paginatedUsers.getUsers().stream().filter(user -> !user.getId().equals(userId))
+                .toList();
+        paginatedUsers.setUsers(filteredUsers);
+
+        return new ResponseEntity<>(paginatedUsers, HttpStatus.OK);
     }
 
     @GetMapping("/download")
