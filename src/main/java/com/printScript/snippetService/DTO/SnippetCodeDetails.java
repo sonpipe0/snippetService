@@ -2,6 +2,7 @@ package com.printScript.snippetService.DTO;
 
 import com.printScript.snippetService.entities.Snippet;
 
+import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -9,6 +10,7 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
+@AllArgsConstructor
 public class SnippetCodeDetails {
     private String author;
     private String id;

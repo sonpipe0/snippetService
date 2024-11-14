@@ -64,8 +64,8 @@ public class TestController {
     }
 
     @PostMapping("/run")
-    public ResponseEntity<Object> runTest(@RequestParam String testId, @RequestHeader("Authorization") String token) {
-        Response<Void> response = testService.runTest(testId, token);
+    public ResponseEntity<Object> runTest(@RequestBody TestDTO testDTO, @RequestHeader("Authorization") String token) {
+        Response<Void> response = testService.runTest(testDTO, token);
         if (response.isError()) {
             return new ResponseEntity<>(response.getError().body(), HttpStatusCode.valueOf(response.getError().code()));
         }

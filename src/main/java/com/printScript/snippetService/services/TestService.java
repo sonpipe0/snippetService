@@ -7,6 +7,8 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -28,6 +30,7 @@ import jakarta.validation.Validator;
 @Service
 public class TestService {
 
+    private static final Logger log = LoggerFactory.getLogger(TestService.class);
     @Autowired
     private TestRepository testRepository;
 
@@ -64,6 +67,11 @@ public class TestService {
         }
 
         Test test = new Test();
+        if (snippet.get().getTests().stream().map(Test::getTitle).toList().contains(testDTO.getTitle())) {
+            test = snippet.get().getTests().stream().filter(t -> t.getTitle().equals(testDTO.getTitle())).findFirst()
+                    .get();
+        }
+
         test.setTitle(testDTO.getTitle());
         test.setSnippet(snippet.get());
         test.setInputs(String.join(",", testDTO.getInputQueue()));
@@ -155,25 +163,22 @@ public class TestService {
         return Response.withData(null);
     }
 
-    public Response<Void> runTest(String testId, String token) {
-        Optional<Test> test = testRepository.findById(testId);
-        if (test.isEmpty()) {
-            return Response.withError(new Error<>(404, "Test not found"));
+    public Response<Void> runTest(TestDTO testDTO, String token) {
+        Optional<Snippet> snippet = snippetRepository.findById(testDTO.getId());
+        if (snippet.isEmpty()) {
+            return Response.withError(new Error<>(404, "Snippet not found"));
         }
-
-        Snippet snippet = test.get().getSnippet();
-        String snippetId = snippet.getId();
+        String snippetId = snippet.get().getId();
 
         Response<String> permissionsResponse = permissionsManagerHandler.checkPermissions(snippetId, token,
                 "/snippets/has-access");
         if (permissionsResponse.isError())
             return Response.withError(permissionsResponse.getError());
 
-        List<String> inputs = List.of(test.get().getInputs().split(","));
-        List<String> expectedOutputs = List.of(test.get().getExpectedOutputs().split(","));
-
-        Response<Void> printScriptResponse = printScriptServiceHandler.executeTest(snippetId, "1.1", inputs,
-                expectedOutputs, token);
+        log.info("testDTO: {}, {}, {}, {}", testDTO.getId(), testDTO.getTitle(), testDTO.getInputQueue(),
+                testDTO.getOutputQueue());
+        Response<Void> printScriptResponse = printScriptServiceHandler.executeTest(snippetId, "1.1",
+                testDTO.getInputQueue(), testDTO.getOutputQueue(), token);
         if (printScriptResponse.isError())
             return Response.withError(printScriptResponse.getError());
 

@@ -4,8 +4,10 @@ import java.io.IOException;
 import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import com.printScript.snippetService.DTO.Response;
 import com.printScript.snippetService.services.ConfigService;
 import com.printScript.snippetService.utils.TokenUtils;
 
@@ -27,9 +29,13 @@ public class LintConfigController {
     }
 
     @GetMapping
-    public void getLintingConfig(@RequestHeader("Authorization") String token) {
+    public ResponseEntity<Object> getLintingConfig(@RequestHeader("Authorization") String token) {
         Map<String, String> decoded = TokenUtils.decodeToken(token.substring(7));
         String userId = decoded.get("userId");
-        configService.getLintingConfig(userId, token);
+        Response<LintingConfigDTO> response = configService.getLintingConfig(userId, token);
+        if (response.isError()) {
+            return ResponseEntity.status(response.getError().code()).body(response.getError());
+        }
+        return ResponseEntity.ok(response.getData());
     }
 }

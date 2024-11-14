@@ -53,7 +53,7 @@ public class SnippetService {
     }
 
     @Transactional
-    public Response<String> saveSnippet(SnippetDTO snippetDTO, String token) {
+    public Response<SnippetCodeDetails> saveSnippet(SnippetDTO snippetDTO, String token) {
         Set<ConstraintViolation<SnippetDTO>> violations = validation.validate(snippetDTO);
         if (!violations.isEmpty()) {
             return Response.withError(getViolationsMessageError(violations));
@@ -85,13 +85,13 @@ public class SnippetService {
                 "/snippets/save/relationship");
         if (permissionsResponse.isError()) {
             TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
-            return permissionsResponse;
+            return Response.withError(permissionsResponse.getError());
         }
         if (language.equals("printscript")) {
             Response<String> printScriptResponse = printScriptServiceHandler.validateCode(code, "1.1", token);
             if (printScriptResponse.isError()) {
                 TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
-                return printScriptResponse;
+                return Response.withError(printScriptResponse.getError());
             }
         }
 
@@ -101,10 +101,13 @@ public class SnippetService {
 
         generateEvents(token, snippetId, snippet, language);
 
-        return Response.withData(snippetId);
+        String author = permissionsManagerHandler.getSnippetAuthor(snippetId, token).getData();
+
+        return Response.withData(new SnippetCodeDetails(author, snippetId, title, snippetDTO.getDescription(), language,
+                extension, code, snippet.getLintStatus()));
     }
 
-    public Response<Void> updateSnippet(UpdateSnippetDTO updateSnippetDTO, String token) {
+    public Response<SnippetCodeDetails> updateSnippet(UpdateSnippetDTO updateSnippetDTO, String token) {
         Set<ConstraintViolation<UpdateSnippetDTO>> violations = validation.validate(updateSnippetDTO);
         if (!violations.isEmpty()) {
             return Response.withError(getViolationsMessageError(violations));
@@ -150,7 +153,20 @@ public class SnippetService {
 
         generateEvents(token, snippetId, snippet, language);
         snippetRepository.save(snippet);
-        return Response.withData(null);
+
+        String author = permissionsManagerHandler.getSnippetAuthor(snippetId, token).getData();
+        String codeSnippet = bucketHandler.get("snippets/" + snippetId, token).getData();
+
+        SnippetCodeDetails snippetDetails = new SnippetCodeDetails();
+        snippetDetails.setId(snippetId);
+        snippetDetails.setTitle(title);
+        snippetDetails.setCode(codeSnippet);
+        snippetDetails.setDescription(updateSnippetDTO.getDescription());
+        snippetDetails.setLanguage(language);
+        snippetDetails.setExtension(extension);
+        snippetDetails.setLintStatus(snippet.getLintStatus());
+        snippetDetails.setAuthor(author);
+        return Response.withData(snippetDetails);
     }
 
     public Response<SnippetCodeDetails> getSnippetDetails(String snippetId, String token) {
@@ -163,6 +179,10 @@ public class SnippetService {
                 "/snippets/has-access");
         if (permissionsResponse.isError())
             return Response.withError(permissionsResponse.getError());
+
+        Response<String> authorResponse = permissionsManagerHandler.getSnippetAuthor(snippetId, token);
+        if (authorResponse.isError())
+            return Response.withError(authorResponse.getError());
 
         Snippet snippet = snippetOpt.get();
 
@@ -179,6 +199,7 @@ public class SnippetService {
         SnippetCodeDetails snippetDetails = new SnippetCodeDetails();
         snippetDetails.setCode(code);
         snippetDetails.setLanguage(language);
+        snippetDetails.setAuthor(authorResponse.getData());
         snippetDetails.setExtension(extension);
         snippetDetails.setDescription(snippet.getDescription());
         snippetDetails.setLintStatus(lintStatus);
@@ -188,7 +209,7 @@ public class SnippetService {
         return Response.withData(snippetDetails);
     }
 
-    public Response<Void> shareSnippet(ShareSnippetDTO shareSnippetDTO, String token) {
+    public Response<SnippetCodeDetails> shareSnippet(ShareSnippetDTO shareSnippetDTO, String token) {
         Set<ConstraintViolation<ShareSnippetDTO>> violations = validation.validate(shareSnippetDTO);
         if (!violations.isEmpty()) {
             return Response.withError(getViolationsMessageError(violations));
@@ -204,8 +225,24 @@ public class SnippetService {
         if (permissionsResponse2.isError()) {
             return Response.withError(permissionsResponse2.getError());
         }
+        Snippet snippet = snippetRepository.findById(shareSnippetDTO.getSnippetId()).orElse(null);
+        if (snippet == null) {
+            return Response.withError(new Error<>(404, "Snippet not found"));
+        }
+        Response<String> authorResponse = permissionsManagerHandler.getSnippetAuthor(shareSnippetDTO.getSnippetId(),
+                token);
 
-        return Response.withData(null);
+        String code = bucketHandler.get("snippets/" + shareSnippetDTO.getSnippetId(), token).getData();
+        SnippetCodeDetails snippetDetails = new SnippetCodeDetails();
+        snippetDetails.setId(shareSnippetDTO.getSnippetId());
+        snippetDetails.setTitle(snippet.getTitle());
+        snippetDetails.setDescription(snippet.getDescription());
+        snippetDetails.setLanguage(snippet.getLanguage());
+        snippetDetails.setExtension(snippet.getExtension());
+        snippetDetails.setLintStatus(snippet.getLintStatus());
+        snippetDetails.setAuthor(authorResponse.getData());
+        snippetDetails.setCode(code);
+        return Response.withData(snippetDetails);
     }
 
     public record Tuple(String code, String name) {
