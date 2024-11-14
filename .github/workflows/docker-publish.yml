@@ -31,6 +31,8 @@ jobs:
           context: .
           push: true
           tags: ghcr.io/${{ github.repository_owner }}/snippet-service:latest-stable
+          build-args: |
+            NEW_RELIC_LICENSE_KEY=${{ secrets.NEW_RELIC_LICENSE_KEY }}
           secrets: |
             gpr_user=${{ github.actor }}
             gpr_token=${{ secrets.GHCR_PAT }}
@@ -42,6 +44,8 @@ jobs:
           context: .
           push: true
           tags: ghcr.io/${{ github.repository_owner }}/snippet-service:latest-dev
+          build-args: |
+              NEW_RELIC_LICENSE_KEY=${{ secrets.NEW_RELIC_LICENSE_KEY }}
           secrets: |
             gpr_user=${{ github.actor }}
             gpr_token=${{ secrets.GHCR_PAT }}
