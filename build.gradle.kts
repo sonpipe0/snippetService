@@ -58,6 +58,7 @@ dependencies {
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
     implementation("org.springframework.boot:spring-boot-starter-data-redis-reactive") // For reactive Redis
     implementation("org.austral.ingsis:redis-streams-mvc:0.1.13")
+    testImplementation("com.h2database:h2")
 }
 
 tasks.withType<Test> {

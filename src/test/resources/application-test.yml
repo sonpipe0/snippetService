@@ -1,0 +1,34 @@
+server:
+  port: 8080
+
+spring:
+  main:
+    allow-bean-definition-overriding: true
+  datasource:
+    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1
+    driver-class-name: org.h2.Driver
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: false
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: "http://dummy-issuer-uri"
+          client-id: "client-id"
+          client-secret: "client-secret"
+stream:
+  redis:
+    stream:
+      lint:
+        key: lint
+      status:
+        key: status
+    consumer:
+      group: snippet-service
+auth0:
+  audience: "audience"

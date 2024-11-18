@@ -7,6 +7,7 @@ import java.util.List;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Profile;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -24,16 +25,14 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 @Configuration
 @EnableWebSecurity
+@Profile("!test")
 public class OAuth2ResourceServerSecurityConfiguration {
 
-    private final String audience;
-    private final String issuer;
+    @Value("${auth0.audience}")
+    private String audience;
 
-    public OAuth2ResourceServerSecurityConfiguration(@Value("${auth0.audience}") String audience,
-            @Value("${spring.security.oauth2.resourceserver.jwt.issuer-uri}") String issuer) {
-        this.audience = audience;
-        this.issuer = issuer;
-    }
+    @Value("${spring.security.oauth2.resourceserver.jwt.issuer-uri}")
+    private String issuer;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
