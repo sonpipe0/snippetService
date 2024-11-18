@@ -45,4 +45,16 @@ public class BucketHandler {
             return Response.withError(new Error<>(500, "Internal Server Error"));
         }
     }
+
+    public Response<Void> delete(String path, String token) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("Authorization", token);
+        HttpEntity<Void> request = new HttpEntity<>(headers);
+        try {
+            bucketWebClient.delete("/v1/asset/" + path, request);
+            return Response.withData(null);
+        } catch (HttpClientErrorException e) {
+            return Response.withError(new Error<>(500, "Internal Server Error"));
+        }
+    }
 }

@@ -31,6 +31,12 @@ public class RequestExecutor {
         return webClient.postForEntity(url, request, responseType).getBody();
     }
 
+    public static <T> T deleteRequest(RestTemplate webClient, String path, HttpEntity<?> request,
+            Class<T> responseType) {
+        String url = createUrl(webClient, path);
+        return webClient.exchange(url, HttpMethod.DELETE, request, responseType).getBody();
+    }
+
     public static void putRequest(RestTemplate webClient, String path, HttpEntity<?> request) {
         String url = createUrl(webClient, path);
         webClient.put(url, request);

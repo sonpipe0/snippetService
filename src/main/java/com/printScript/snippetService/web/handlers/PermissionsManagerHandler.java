@@ -1,7 +1,6 @@
 package com.printScript.snippetService.web.handlers;
 
-import static com.printScript.snippetService.web.RequestExecutor.getRequest;
-import static com.printScript.snippetService.web.RequestExecutor.postRequest;
+import static com.printScript.snippetService.web.RequestExecutor.*;
 
 import java.util.List;
 import java.util.Map;
@@ -51,6 +50,18 @@ public class PermissionsManagerHandler {
         Map<String, String> params = Map.of("snippetId", snippetId);
         try {
             getRequest(permissionsWebClient, path, requestPermissions, Void.class, params);
+            return Response.withData(null);
+        } catch (HttpClientErrorException e) {
+            return Response.withError(new Error<>(e.getStatusCode().value(), e.getResponseBodyAsString()));
+        }
+    }
+
+    public Response<String> deleteRelation(String snippetId, String path, String token) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("Authorization", token);
+        HttpEntity<String> requestPermissions = new HttpEntity<>(snippetId, headers);
+        try {
+            deleteRequest(permissionsWebClient, path, requestPermissions, Void.class);
             return Response.withData(null);
         } catch (HttpClientErrorException e) {
             return Response.withError(new Error<>(e.getStatusCode().value(), e.getResponseBodyAsString()));
