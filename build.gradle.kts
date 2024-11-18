@@ -58,10 +58,6 @@ dependencies {
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
     implementation("org.springframework.boot:spring-boot-starter-data-redis-reactive") // For reactive Redis
     implementation("org.austral.ingsis:redis-streams-mvc:0.1.13")
-    testImplementation("com.h2database:h2")
-    testImplementation("io.jsonwebtoken:jjwt-api:0.11.2")
-    testRuntimeOnly("io.jsonwebtoken:jjwt-impl:0.11.2")
-    testRuntimeOnly("io.jsonwebtoken:jjwt-jackson:0.11.2")
 }
 
 tasks.withType<Test> {

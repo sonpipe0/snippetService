@@ -105,16 +105,6 @@ public class SnippetController {
         return ResponseEntity.ok(response.getData());
     }
 
-    @DeleteMapping("/delete")
-    public ResponseEntity<Object> deleteSnippet(@RequestParam String snippetId,
-            @RequestHeader("Authorization") String token) {
-        Response<String> response = snippetService.deleteSnippet(snippetId, token);
-        if (response.isError()) {
-            return new ResponseEntity<>(response.getError().body(), HttpStatusCode.valueOf(response.getError().code()));
-        }
-        return ResponseEntity.ok(response.getData());
-    }
-
     @PostMapping("/share")
     public ResponseEntity<Object> shareSnippet(@RequestBody ShareSnippetDTO shareSnippetDTO,
             @RequestHeader("Authorization") String token) {

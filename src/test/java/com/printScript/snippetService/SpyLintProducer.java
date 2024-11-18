@@ -4,12 +4,14 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Component;
 
 import com.printScript.snippetService.redis.LintProducerInterface;
 
 import events.ConfigPublishEvent;
 
+@Primary
 @Component
 public class SpyLintProducer implements LintProducerInterface {
 

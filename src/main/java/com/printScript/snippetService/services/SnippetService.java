@@ -209,38 +209,6 @@ public class SnippetService {
         return Response.withData(snippetDetails);
     }
 
-    public Response<String> deleteSnippet(String snippetId, String token) {
-        Response<String> canEditResponse = permissionsManagerHandler.checkPermissions(snippetId, token,
-                "/snippets/can-edit");
-        if (canEditResponse.isError()) {
-            Response<String> hasAccessResponse = permissionsManagerHandler.checkPermissions(snippetId, token,
-                    "/snippets/has-access");
-            if (hasAccessResponse.isError()) {
-                return Response.withError(hasAccessResponse.getError());
-            }
-
-            Response<String> deleteResponse = permissionsManagerHandler.deleteRelation(snippetId,
-                    "/snippets/delete/relationship", token);
-            if (deleteResponse.isError())
-                return Response.withError(deleteResponse.getError());
-
-            return Response.withData(null);
-        }
-
-        Response<String> deleteResponse = permissionsManagerHandler.deleteRelation(snippetId,
-                "/snippets/delete/all-relationships", token);
-        if (deleteResponse.isError())
-            return Response.withError(deleteResponse.getError());
-
-        snippetRepository.deleteById(snippetId);
-
-        Response<Void> response = bucketHandler.delete("snippets/" + snippetId, token);
-        if (response.isError())
-            return Response.withError(response.getError());
-
-        return Response.withData(null);
-    }
-
     public Response<SnippetCodeDetails> shareSnippet(ShareSnippetDTO shareSnippetDTO, String token) {
         Set<ConstraintViolation<ShareSnippetDTO>> violations = validation.validate(shareSnippetDTO);
         if (!violations.isEmpty()) {
