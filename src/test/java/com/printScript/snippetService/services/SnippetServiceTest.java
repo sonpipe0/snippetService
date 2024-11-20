@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
+import java.util.List;
 import java.util.regex.Pattern;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -377,4 +378,126 @@ public class SnippetServiceTest {
     assertEquals(snippet2.getLintStatus(), Snippet.Status.IN_PROGRESS);
     assertEquals(snippet2.getFormatStatus(), Snippet.Status.IN_PROGRESS);
   }
+
+  @Test
+  void testDownloadSnippet() {
+    when(bucketHandler.get(anyString(), anyString()))
+        .thenReturn(Response.withData("print('Hello World!')"));
+
+    SnippetDTO snippetDTO = new SnippetDTO();
+    snippetDTO.setCode("print('Hello World!')");
+    snippetDTO.setLanguage("printscript");
+    snippetDTO.setExtension("ps");
+    snippetDTO.setDescription("Hello World in PrintScript");
+    snippetDTO.setTitle("Hello World");
+
+    Response<SnippetCodeDetails> saveResponse = snippetService.saveSnippet(snippetDTO, mockToken);
+    assertNotNull(saveResponse.getData());
+
+    // Call the downloadSnippet method
+    Response<SnippetService.Tuple> response =
+        snippetService.downloadSnippet(saveResponse.getData().getId(), mockToken);
+
+    // Verify the response
+    assertNotNull(response.getData());
+    assertEquals("print('Hello World!')", response.getData().code());
+    assertEquals("Hello_World.ps", response.getData().name());
+  }
+
+  @Test
+  void testGetFormattedFile() {
+    when(bucketHandler.get(anyString(), anyString()))
+        .thenReturn(Response.withData("formatted code"));
+
+    // Create and save a snippet
+    Snippet snippet = new Snippet();
+    snippet.setTitle("Hello World");
+    snippet.setDescription("Hello World in PrintScript");
+    snippet.setLanguage("printscript");
+    snippet.setExtension("ps");
+    snippet.setLintStatus(Snippet.Status.IN_PROGRESS);
+    snippet.setFormatStatus(Snippet.Status.COMPLIANT);
+    snippetRepository.save(snippet);
+
+    // Call the getFormattedFile method
+    Response<String> response = snippetService.getFormattedFile(snippet.getId(), mockToken);
+
+    // Verify the response
+    assertNotNull(response.getData());
+    assertEquals("formatted code", response.getData());
+    assertFalse(response.isError());
+  }
+
+    @Test
+    void testGetAccessibleSnippets() {
+        Snippet snippet1 = new Snippet();
+        snippet1.setTitle("Title");
+        snippet1.setDescription("Description");
+        snippet1.setLanguage("printscript");
+        snippet1.setExtension("ps");
+        snippet1.setLintStatus(Snippet.Status.IN_PROGRESS);
+        snippet1.setFormatStatus(Snippet.Status.IN_PROGRESS);
+        snippetRepository.save(snippet1);
+
+        Snippet snippet2 = new Snippet();
+        snippet2.setTitle("Title");
+        snippet2.setDescription("Description");
+        snippet2.setLanguage("printscript");
+        snippet2.setExtension("ps");
+        snippet2.setLintStatus(Snippet.Status.IN_PROGRESS);
+        snippet2.setFormatStatus(Snippet.Status.IN_PROGRESS);
+        snippetRepository.save(snippet2);
+
+        List<SnippetPermissionGrantResponse> relationships = List.of(
+                new SnippetPermissionGrantResponse(snippet1.getId(), "mockUsername"),
+                new SnippetPermissionGrantResponse(snippet2.getId(), "mockUsername"));
+
+        when(permissionsManagerHandler.getSnippetRelationships(anyString(), anyString()))
+                .thenReturn(Response.withData(relationships));
+
+        when(bucketHandler.get(anyString(), anyString())).thenReturn(Response.withData("print('Hello World!')"));
+
+        // Call the getAccessibleSnippets method
+        Response<List<SnippetCodeDetails>> response = snippetService.getAccessibleSnippets(mockToken, "relation", 0, 10,
+                "Title");
+
+        // Verify the response
+        assertNotNull(response.getData());
+        assertEquals(2, response.getData().size());
+
+        SnippetCodeDetails snippetDetails1 = response.getData().getFirst();
+        assertEquals("Title", snippetDetails1.getTitle());
+        assertEquals("print('Hello World!')", snippetDetails1.getCode());
+        assertEquals("Description", snippetDetails1.getDescription());
+        assertEquals("printscript", snippetDetails1.getLanguage());
+        assertEquals("ps", snippetDetails1.getExtension());
+        assertEquals(Snippet.Status.IN_PROGRESS, snippetDetails1.getLintStatus());
+        assertEquals("mockUsername", snippetDetails1.getAuthor());
+
+        SnippetCodeDetails snippetDetails2 = response.getData().get(1);
+        assertEquals("Title", snippetDetails2.getTitle());
+        assertEquals("print('Hello World!')", snippetDetails2.getCode());
+        assertEquals("Description", snippetDetails2.getDescription());
+        assertEquals("printscript", snippetDetails2.getLanguage());
+        assertEquals("ps", snippetDetails2.getExtension());
+        assertEquals(Snippet.Status.IN_PROGRESS, snippetDetails2.getLintStatus());
+        assertEquals("mockUsername", snippetDetails2.getAuthor());
+    }
+
+    @Test
+    void testGetSnippetUsersSuccess() {
+        // Mock the successful response
+        PaginatedUsers paginatedUsers = new PaginatedUsers();
+        Response<PaginatedUsers> mockSuccessResponse = Response.withData(paginatedUsers);
+        when(permissionsManagerHandler.getSnippetUsers(anyString(), anyString(), anyInt(), anyInt()))
+                .thenReturn(mockSuccessResponse);
+
+        // Call the method
+        Response<PaginatedUsers> response = snippetService.getSnippetUsers("mockToken", "prefix", 0, 10);
+
+        // Verify the response
+        assertFalse(response.isError());
+        assertNotNull(response.getData());
+        assertEquals(paginatedUsers, response.getData());
+    }
 }
