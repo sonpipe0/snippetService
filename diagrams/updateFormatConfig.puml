@@ -1,0 +1,49 @@
+@startuml
+title Update Format Config Happiest Path
+entity SnippetServer
+participant DefaultConfigInterceptor
+participant SnippetController
+participant SnippetService
+entity PermissionsServer
+participant UserInterceptor
+participant PermissionsController
+database SnippetDB
+database PermissionsDB
+database Bucket
+entity PrintScriptServer
+entity BucketServer
+entity Redis
+
+SnippetService -> SnippetController: updateFormatConfig
+SnippetController -> SnippetService: updateFormatConfig
+SnippetService -> PermissionsServer: checkPermissions
+PermissionsServer -> PermissionsController: checkPermissions
+PermissionsController -> PermissionsService: checkPermissions
+PermissionsService -> PermissionsDB: checkPermissions
+PermissionsServer -> SnippetServer: Permissions Response
+SnippetService -> PermissionsServer: getOwnedSnippets
+PermissionsServer -> PermissionsController: getOwnedSnippets
+PermissionsController -> PermissionsService: getOwnedSnippets
+PermissionsService -> PermissionsDB: getOwnedSnippets
+PermissionsServer -> SnippetServer: Owned Snippets Response
+loop x times
+    SnippetService --> Redis: Format Owned Snippets
+end
+loop x times
+    PrintScriptServer -->o Redis:  Format Owned Snippets
+    PrintScriptServer -> PrintScriptService: Format Owned Snippets
+    PrintScriptService -> BucketServer: saveFormattedSnippet
+    BucketServer -> Bucket : saveFormattedSnippet
+    PrintScriptServer --> Redis: Compliance
+end
+SnippetService -> SnippetDB: updateFormatConfig
+SnippetService -> BucketServer: updateFormatJson
+BucketServer -> Bucket: updateFormatJson
+SnippetService -> SnippetDB: updateFormatConfig
+
+loop x times
+    SnippetService -->o Redis: Format Response
+    SnippetService -> SnippetDB: saveSnippetStatus
+end
+
+@enduml

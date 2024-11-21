@@ -1,0 +1,31 @@
+@startuml
+title Component Diagram
+[SnippetServer] as SnippetServerContainer
+[PermissionsServer] as PermissionsServerContainer
+[PrintScriptServer] as PrintScriptServerContainer
+[BucketServer] as BucketServer
+[Redis] as Redis
+[ui-service] as uiService
+database SnippetDB
+database PermissionsDB
+database Bucket
+
+[nginx] as nginx
+[vm] as vm
+
+vm -down-> nginx
+nginx -down-> uiService
+uiService -up-> nginx
+nginx -right-> SnippetServerContainer
+SnippetServerContainer -down-> SnippetDB
+SnippetServerContainer -down-> PermissionsServerContainer
+PermissionsServerContainer -down-> PermissionsDB
+PrintScriptServerContainer -left-> Redis
+SnippetServerContainer -right-> Redis
+PrintScriptServerContainer -left-> BucketServer
+SnippetServerContainer -down-> BucketServer
+SnippetServerContainer -> PrintScriptServerContainer
+BucketServer -down-> Bucket
+
+
+@enduml
