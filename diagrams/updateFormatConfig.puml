@@ -1,7 +1,6 @@
 @startuml
 title Update Format Config Happiest Path
 entity SnippetServer
-participant DefaultConfigInterceptor
 participant SnippetController
 participant SnippetService
 entity PermissionsServer
@@ -14,7 +13,7 @@ entity PrintScriptServer
 entity BucketServer
 entity Redis
 
-SnippetService -> SnippetController: updateFormatConfig
+SnippetServer -> SnippetController: updateFormatConfig
 SnippetController -> SnippetService: updateFormatConfig
 SnippetService -> PermissionsServer: checkPermissions
 PermissionsServer -> PermissionsController: checkPermissions

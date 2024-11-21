@@ -34,4 +34,4 @@ jobs:
           echo "TOKEN=${{ secrets.GITHUB_TOKEN }}" >> $GITHUB_ENV
 
       - name: Run tests
-        run: ./gradlew test
+        run: ./gradlew check

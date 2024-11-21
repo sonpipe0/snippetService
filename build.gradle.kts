@@ -4,6 +4,7 @@ plugins {
 	id("io.spring.dependency-management") version "1.1.6"
     id("com.diffplug.spotless") version "6.25.0"
     id("checkstyle")
+    id("jacoco")
     kotlin("jvm") version "2.0.21"
 }
 
@@ -81,10 +82,53 @@ spotless {
     }
 }
 
+jacoco {
+    toolVersion = "0.8.12"
+}
+
 tasks.check {
     dependsOn("checkstyleMain", "checkstyleTest", "spotlessCheck")
 }
 
 tasks.build {
     dependsOn("spotlessApply")
+}
+tasks.jacocoTestReport {
+    dependsOn(tasks.test)
+    reports {
+        xml.required.set(true)
+        html.required.set(true)
+    }
+    classDirectories.setFrom(
+        files(
+            classDirectories.files.map {
+                fileTree(it) {
+                    include("**/services/**", "**/controllers/**")
+                }
+            }
+        )
+    )
+}
+tasks.jacocoTestCoverageVerification {
+    dependsOn(tasks.jacocoTestReport)
+
+    violationRules {
+        rule {
+            limit {
+                minimum = 0.8.toBigDecimal()
+            }
+        }
+    }
+    classDirectories.setFrom(
+        files(
+            classDirectories.files.map {
+                fileTree(it) {
+                    include("**/services/**", "**/controllers/**")
+                }
+            }
+        )
+    )
+}
+tasks.check{
+    dependsOn("jacocoTestCoverageVerification")
 }
