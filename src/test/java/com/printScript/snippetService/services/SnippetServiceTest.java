@@ -69,28 +69,7 @@ public class SnippetServiceTest {
 
     @BeforeEach
     void setUp() {
-        MockitoAnnotations.openMocks(this);
-
-        SecurityContext securityContext = mock(SecurityContext.class);
-        Authentication authentication = mock(Authentication.class);
-        Jwt jwt = mock(Jwt.class);
-
-        String header = "{\"alg\":\"HS256\",\"typ\":\"JWT\"}";
-        String payload = "{\"sub\":\"mockUserId\",\"username\":\"mockUsername\",\"role\":\"user\",\"iat\":1609459200}";
-        String signature = "mockSignature";
-
-        mockToken = base64Encode(header) + "." + base64Encode(payload) + "." + signature;
-        mockToken = "Bearer " + mockToken;
-
-        when(jwt.getTokenValue()).thenReturn(mockToken);
-        when(jwt.getClaim("sub")).thenReturn("mockUserId");
-        when(jwt.getClaim("username")).thenReturn("mockUsername");
-        when(jwt.getClaim("role")).thenReturn("user");
-
-        when(securityContext.getAuthentication()).thenReturn(authentication);
-        when(authentication.getPrincipal()).thenReturn(jwt);
-
-        SecurityContextHolder.setContext(securityContext);
+        mockToken = securityConfig(this);
 
         when(printScriptServiceHandler.validateCode(anyString(), anyString(), anyString()))
                 .thenReturn(Response.withData("Code validated successfully"));
@@ -107,7 +86,33 @@ public class SnippetServiceTest {
                 .thenReturn(Response.withData(null));
     }
 
-    private String base64Encode(String value) {
+    public static String securityConfig(Object testClass) {
+        MockitoAnnotations.openMocks(testClass);
+
+        SecurityContext securityContext = mock(SecurityContext.class);
+        Authentication authentication = mock(Authentication.class);
+        Jwt jwt = mock(Jwt.class);
+
+        String header = "{\"alg\":\"HS256\",\"typ\":\"JWT\"}";
+        String payload = "{\"sub\":\"mockUserId\",\"username\":\"mockUsername\",\"role\":\"user\",\"iat\":1609459200}";
+        String signature = "mockSignature";
+
+        String mockToken = base64Encode(header) + "." + base64Encode(payload) + "." + signature;
+        mockToken = "Bearer " + mockToken;
+
+        when(jwt.getTokenValue()).thenReturn(mockToken);
+        when(jwt.getClaim("sub")).thenReturn("mockUserId");
+        when(jwt.getClaim("username")).thenReturn("mockUsername");
+        when(jwt.getClaim("role")).thenReturn("user");
+
+        when(securityContext.getAuthentication()).thenReturn(authentication);
+        when(authentication.getPrincipal()).thenReturn(jwt);
+
+        SecurityContextHolder.setContext(securityContext);
+        return mockToken;
+    }
+
+    public static String base64Encode(String value) {
         return java.util.Base64.getUrlEncoder().withoutPadding().encodeToString(value.getBytes());
     }
 
