@@ -1,0 +1,35 @@
+@startuml
+title Create Snippet Happiest Path
+entity SnippetServer
+participant DefaultConfigInterceptor
+participant SnippetController
+participant SnippetService
+entity PermissionsServer
+participant UserInterceptor
+participant PermissionsController
+database SnippetDB
+database PermissionsDB
+database Bucket
+entity PrintScriptServer
+entity BucketServer
+entity Redis
+
+SnippetServer -> DefaultConfigInterceptor: createDefaultConfig
+DefaultConfigInterceptor -> SnippetController: createSnippet
+SnippetController -> SnippetService: createSnippet
+SnippetService -> PermissionsServer: saveRelation
+PermissionsServer -> UserInterceptor: createUser
+UserInterceptor -> PermissionsController: saveRelation
+PermissionsController -> PermissionsService: saveRelation
+PermissionsService -> PermissionsDB: saveRelation
+SnippetService --> Redis: Lint & Format Snippet
+PrintScriptServer -->o Redis: Lint & Format Snippet
+PrintScriptServer -> PrintScriptService: Lint & Format
+PrintScriptService -> BucketServer: saveFormattedSnippet
+BucketServer -> Bucket : saveFormattedSnippet
+PrintScriptServer --> Redis: Compliance
+SnippetService -> SnippetDB: saveSnippet
+SnippetService -> BucketServer: saveSnippet
+BucketServer -> Bucket: saveSnippet
+SnippetService -> SnippetDB: saveSnippet
+@enduml
