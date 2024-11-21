@@ -2,6 +2,7 @@ package com.printScript.snippetService.services;
 
 import static com.printScript.snippetService.utils.Utils.getViolationsMessageError;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -74,8 +75,10 @@ public class TestService {
 
         test.setTitle(testDTO.getTitle());
         test.setSnippet(snippet.get());
-        test.setInputs(String.join(",", testDTO.getInputQueue()));
-        test.setExpectedOutputs(String.join(",", testDTO.getOutputQueue()));
+        test.setInputs(
+                testDTO.getInputQueue().stream().map(input -> "(" + input + ")").collect(Collectors.joining("(*)")));
+        test.setExpectedOutputs(
+                testDTO.getOutputQueue().stream().map(output -> "(" + output + ")").collect(Collectors.joining("(*)")));
 
         try {
             testRepository.save(test);
@@ -98,12 +101,41 @@ public class TestService {
             TestDTO testDTO = new TestDTO();
             testDTO.setId(test.getId());
             testDTO.setTitle(test.getTitle());
-            testDTO.setInputQueue(List.of(test.getInputs().split(",")));
-            testDTO.setOutputQueue(List.of(test.getExpectedOutputs().split(",")));
+            testDTO.setInputQueue(splitTopLevel(test.getInputs(), "("));
+            testDTO.setOutputQueue(splitTopLevel(test.getExpectedOutputs(), "("));
+            if (test.getInputs().equals(""))
+                testDTO.setInputQueue(List.of());
+            if (test.getExpectedOutputs().equals(""))
+                testDTO.setOutputQueue(List.of());
             return testDTO;
         }).collect(Collectors.toList());
 
         return Response.withData(testDTOs);
+    }
+
+    private List<String> splitTopLevel(String str, String delimiter) {
+        List<String> result = new ArrayList<>();
+        int level = 0;
+        if (str.isEmpty())
+            return List.of();
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < str.length(); i++) {
+            char c = str.charAt(i);
+            if (c == '(')
+                level++;
+            if (c == ')')
+                level--;
+            if (level == 0 && str.startsWith(delimiter, i)) {
+                result.add(sb.toString());
+                sb.setLength(0);
+                i += delimiter.length() - 1;
+            } else {
+                sb.append(c);
+            }
+        }
+        result.add(sb.toString());
+        return result.stream().map(s -> s.substring(1, s.length() - 1)).collect(Collectors.toList()); // Remove outer
+        // brackets
     }
 
     public Response<Void> updateTest(TestDTO testDTO, String token) {
@@ -128,8 +160,10 @@ public class TestService {
             return Response.withError(permissionsResponse.getError());
 
         test.get().setTitle(testDTO.getTitle());
-        test.get().setInputs(String.join(",", testDTO.getInputQueue()));
-        test.get().setExpectedOutputs(String.join(",", testDTO.getOutputQueue()));
+        test.get().setInputs(
+                testDTO.getInputQueue().stream().map(input -> "(" + input + ")").collect(Collectors.joining("(*)")));
+        test.get().setExpectedOutputs(
+                testDTO.getOutputQueue().stream().map(output -> "(" + output + ")").collect(Collectors.joining("(*)")));
 
         try {
             testRepository.save(test.get());
@@ -142,9 +176,8 @@ public class TestService {
 
     public Response<Void> deleteTest(String testId, String token) {
         Optional<Test> test = testRepository.findById(testId);
-        if (test.isEmpty()) {
+        if (test.isEmpty())
             return Response.withError(new Error<>(404, "Test not found"));
-        }
 
         Snippet snippet = test.get().getSnippet();
         String snippetId = snippet.getId();
