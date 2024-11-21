@@ -36,4 +36,18 @@ public class UpdateSnippetDTO {
         this.extension = extension;
         this.code = code;
     }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) {
+            return true;
+        }
+        if (obj == null || getClass() != obj.getClass()) {
+            return false;
+        }
+        UpdateSnippetDTO updateSnippetDTO = (UpdateSnippetDTO) obj;
+        return snippetId.equals(updateSnippetDTO.snippetId) && title.equals(updateSnippetDTO.title)
+                && description.equals(updateSnippetDTO.description) && language.equals(updateSnippetDTO.language)
+                && extension.equals(updateSnippetDTO.extension) && code.equals(updateSnippetDTO.code);
+    }
 }
