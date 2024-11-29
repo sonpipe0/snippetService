@@ -34,3 +34,9 @@ stream:
       group: ${STREAM_CONSUMER_GROUP_SNIPPET:snippet-service}
 auth0:
   audience: ${AUTH0_AUDIENCE}
+logging:
+  level:
+    root: INFO
+    com.printScript: INFO
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%X{correlationId}] - %msg%n"
