@@ -28,6 +28,8 @@ stream:
     stream:
       lint:
         key: ${STREAM_LINT_KEY:lint}
+      format:
+        key: ${STREAM_FORMAT_KEY:format}
       status:
         key: ${STREAM_STATUS_KEY:status}
     consumer:

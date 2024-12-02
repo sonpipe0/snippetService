@@ -12,13 +12,13 @@ import com.printScript.snippetService.config.RedisStreamProducer;
 import events.ConfigPublishEvent;
 
 @Component
-public class LintProducer extends RedisStreamProducer implements ProducerInterface {
+public class FormatProducer extends RedisStreamProducer implements ProducerInterface {
 
     private static final Logger logger = LoggerFactory.getLogger(LintProducer.class);
 
     @Autowired
-    public LintProducer(@Value("${stream.redis.stream.lint.key}") String streamKey,
-            ReactiveRedisTemplate<String, String> redis) {
+    public FormatProducer(@Value("${stream.redis.stream.format.key}") String streamKey,
+                        ReactiveRedisTemplate<String, String> redis) {
         super(streamKey, redis);
     }
 
