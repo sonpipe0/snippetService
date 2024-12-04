@@ -34,10 +34,12 @@ public class LintUpdateService {
 
     @Autowired
     public LintUpdateService(ProducerInterface lintProducer) {
+        logger.info("LintUpdateService was created");
         this.lintProducer = lintProducer;
     }
 
     public void sendLintMessages(String userId, String token) {
+        logger.info("sendLintMessages was called");
         List<String> snippets = this.getAllSnippets(userId, token);
         AtomicInteger count = new AtomicInteger();
         for (String snippet : snippets) {
@@ -66,6 +68,7 @@ public class LintUpdateService {
     }
 
     public List<String> getAllSnippets(String userId, String token) {
+        logger.info("getAllSnippets was called");
         Response<List<String>> snippets = configServiceWebHandler.getAllSnippets(userId, token);
         if (snippets.isError()) {
             return new ArrayList<>();
