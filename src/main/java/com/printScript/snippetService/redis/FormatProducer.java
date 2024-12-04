@@ -18,7 +18,7 @@ public class FormatProducer extends RedisStreamProducer implements ProducerInter
 
     @Autowired
     public FormatProducer(@Value("${stream.redis.stream.format.key}") String streamKey,
-                        ReactiveRedisTemplate<String, String> redis) {
+            ReactiveRedisTemplate<String, String> redis) {
         super(streamKey, redis);
     }
 
