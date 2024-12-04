@@ -50,6 +50,7 @@ public class TestService {
     private final Validator validation = Validation.buildDefaultValidatorFactory().getValidator();
 
     public Response<String> createTest(TestDTO testDTO, String token) {
+        log.info("createTest was called");
         Set<ConstraintViolation<TestDTO>> violations = validation.validate(testDTO);
         if (!violations.isEmpty()) {
             return Response.withError(getViolationsMessageError(violations));
@@ -90,6 +91,7 @@ public class TestService {
     }
 
     public Response<List<TestDTO>> getTestsForSnippet(String snippetId, String token) {
+        log.info("getTestsForSnippet was called");
         Response<String> permissionsResponse = permissionsManagerHandler.checkPermissions(snippetId, token,
                 "/snippets/has-access");
         if (permissionsResponse.isError())
@@ -114,6 +116,7 @@ public class TestService {
     }
 
     private List<String> splitTopLevel(String str, String delimiter) {
+        log.info("splitTopLevel was called");
         List<String> result = new ArrayList<>();
         int level = 0;
         if (str.isEmpty())
@@ -139,6 +142,7 @@ public class TestService {
     }
 
     public Response<Void> updateTest(TestDTO testDTO, String token) {
+        log.info("updateTest was called");
         Set<ConstraintViolation<TestDTO>> violations = validation.validate(testDTO);
         if (!violations.isEmpty()) {
             return Response.withError(getViolationsMessageError(violations));
@@ -175,6 +179,7 @@ public class TestService {
     }
 
     public Response<Void> deleteTest(String testId, String token) {
+        log.info("deleteTest was called");
         Optional<Test> test = testRepository.findById(testId);
         if (test.isEmpty())
             return Response.withError(new Error<>(404, "Test not found"));
@@ -197,6 +202,7 @@ public class TestService {
     }
 
     public Response<Void> runTest(TestDTO testDTO, String token) {
+        log.info("runTest was called");
         Optional<Snippet> snippet = snippetRepository.findById(testDTO.getId());
         if (snippet.isEmpty()) {
             return Response.withError(new Error<>(404, "Snippet not found"));

@@ -34,10 +34,12 @@ public class FormatUpdateService {
 
     @Autowired
     public FormatUpdateService(ProducerInterface lintProducer) {
+        logger.info("FormatUpdateService was created");
         this.lintProducer = lintProducer;
     }
 
     public void sendFormatMessages(String userId, String token) {
+        logger.info("sendFormatMessages was called");
         List<String> snippets = this.getAllSnippets(userId, token);
         AtomicInteger count = new AtomicInteger();
         for (String snippet : snippets) {
@@ -66,6 +68,7 @@ public class FormatUpdateService {
     }
 
     public List<String> getAllSnippets(String userId, String token) {
+        logger.info("getAllSnippets was called");
         Response<List<String>> snippets = configServiceWebHandler.getAllSnippets(userId, token);
         if (snippets.isError()) {
             return new ArrayList<>();
