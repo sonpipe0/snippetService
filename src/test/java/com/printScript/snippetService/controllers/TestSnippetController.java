@@ -23,6 +23,7 @@ import com.printScript.snippetService.DTO.*;
 import com.printScript.snippetService.TestSecurityConfig;
 import com.printScript.snippetService.entities.Snippet;
 import com.printScript.snippetService.errorDTO.Error;
+import com.printScript.snippetService.redis.FormatProducer;
 import com.printScript.snippetService.redis.LintProducer;
 import com.printScript.snippetService.redis.StatusConsumer;
 import com.printScript.snippetService.services.SnippetService;
@@ -37,6 +38,9 @@ public class TestSnippetController {
 
     @MockBean
     private LintProducer lintProducer;
+
+    @MockBean
+    private FormatProducer formatProducer;
 
     @MockBean
     private StatusConsumer statusConsumer;

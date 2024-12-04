@@ -15,7 +15,7 @@ import org.springframework.transaction.interceptor.TransactionAspectSupport;
 import com.printScript.snippetService.DTO.*;
 import com.printScript.snippetService.entities.Snippet;
 import com.printScript.snippetService.errorDTO.Error;
-import com.printScript.snippetService.redis.LintProducerInterface;
+import com.printScript.snippetService.redis.ProducerInterface;
 import com.printScript.snippetService.repositories.SnippetRepository;
 import com.printScript.snippetService.utils.TokenUtils;
 import com.printScript.snippetService.web.handlers.BucketHandler;
@@ -43,13 +43,16 @@ public class SnippetService {
     @Autowired
     private PrintScriptServiceHandler printScriptServiceHandler;
 
-    private final LintProducerInterface lintProducer;
+    private final ProducerInterface lintProducer;
+
+    private final ProducerInterface formatProducer;
 
     private final Validator validation = Validation.buildDefaultValidatorFactory().getValidator();
 
     @Autowired
-    public SnippetService(LintProducerInterface lintProducer) {
+    public SnippetService(ProducerInterface lintProducer, ProducerInterface formatProducer) {
         this.lintProducer = lintProducer;
+        this.formatProducer = formatProducer;
     }
 
     @Transactional
@@ -353,7 +356,7 @@ public class SnippetService {
         formatPublishEvent.setUserId(userId);
         formatPublishEvent.setType(ConfigPublishEvent.ConfigType.FORMAT);
 
-        lintProducer.publishEvent(formatPublishEvent);
+        formatProducer.publishEvent(formatPublishEvent);
     }
 
     public Response<List<SnippetCodeDetails>> getAccessibleSnippets(String token, String relation, Integer page,

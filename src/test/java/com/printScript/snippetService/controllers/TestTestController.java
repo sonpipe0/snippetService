@@ -21,6 +21,7 @@ import com.printScript.snippetService.DTO.Response;
 import com.printScript.snippetService.DTO.TestDTO;
 import com.printScript.snippetService.TestSecurityConfig;
 import com.printScript.snippetService.errorDTO.Error;
+import com.printScript.snippetService.redis.FormatProducer;
 import com.printScript.snippetService.redis.LintProducer;
 import com.printScript.snippetService.redis.StatusConsumer;
 import com.printScript.snippetService.services.SnippetServiceTest;
@@ -37,6 +38,9 @@ public class TestTestController {
 
     @MockBean
     private StatusConsumer statusConsumer;
+
+    @MockBean
+    private FormatProducer formatProducer;
 
     String token;
 

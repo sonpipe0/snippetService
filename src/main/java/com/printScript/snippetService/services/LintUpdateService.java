@@ -11,7 +11,7 @@ import org.springframework.stereotype.Service;
 
 import com.printScript.snippetService.DTO.Response;
 import com.printScript.snippetService.entities.Snippet;
-import com.printScript.snippetService.redis.LintProducerInterface;
+import com.printScript.snippetService.redis.ProducerInterface;
 import com.printScript.snippetService.repositories.SnippetRepository;
 import com.printScript.snippetService.web.ConfigServiceWebHandler;
 
@@ -20,7 +20,7 @@ import events.ConfigPublishEvent;
 @Service
 public class LintUpdateService {
 
-    private final LintProducerInterface lintProducer;
+    private final ProducerInterface lintProducer;
 
     private static final Logger logger = Logger.getLogger(LintUpdateService.class.getName());
 
@@ -33,7 +33,7 @@ public class LintUpdateService {
     private SnippetRepository snippetRepository;
 
     @Autowired
-    public LintUpdateService(LintProducerInterface lintProducer) {
+    public LintUpdateService(ProducerInterface lintProducer) {
         this.lintProducer = lintProducer;
     }
 

@@ -20,6 +20,7 @@ import org.springframework.test.context.ActiveProfiles;
 import com.printScript.snippetService.DTO.Response;
 import com.printScript.snippetService.TestSecurityConfig;
 import com.printScript.snippetService.errorDTO.Error;
+import com.printScript.snippetService.redis.FormatProducer;
 import com.printScript.snippetService.redis.LintProducer;
 import com.printScript.snippetService.redis.StatusConsumer;
 import com.printScript.snippetService.services.ConfigService;
@@ -35,6 +36,9 @@ import DTO.LintingConfigDTO;
 public class TestLintController {
     @MockBean
     private LintProducer lintProducer;
+
+    @MockBean
+    private FormatProducer formatProducer;
 
     @MockBean
     private StatusConsumer statusConsumer;
