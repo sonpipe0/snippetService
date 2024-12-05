@@ -102,7 +102,7 @@ public class PermissionsManagerHandler {
         header.set("Authorization", token);
         HttpEntity<Void> requestPermissions = new HttpEntity<>(header);
         try {
-            String response = getRequest(permissionsWebClient, "user/paginated", requestPermissions, String.class,
+            String response = getRequest(permissionsWebClient, "snippets/paginated", requestPermissions, String.class,
                     Map.of("page", page.toString(), "pageSize", pageSize.toString(), "prefix", prefix));
             PaginatedUsers paginatedUsers = objectMapper.readValue(response, PaginatedUsers.class);
             return Response.withData(paginatedUsers);
