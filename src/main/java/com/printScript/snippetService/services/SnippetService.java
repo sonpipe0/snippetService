@@ -371,7 +371,7 @@ public class SnippetService {
         formatProducer.publishEvent(formatPublishEvent);
     }
 
-    public Response<List<SnippetCodeDetails>> getAccessibleSnippets(String token, String relation, Integer page,
+    public Response<PaginationAndDetails> getAccessibleSnippets(String token, String relation, Integer page,
             Integer pageSize, String name) {
         log.info("getAccessibleSnippets was called");
         Response<List<SnippetPermissionGrantResponse>> relationshipsResponse = permissionsManagerHandler
@@ -404,7 +404,9 @@ public class SnippetService {
 
             return snippetDetail;
         }).toList();
-        return Response.withData(snippetDetails);
+        PaginationAndDetails paginationAndDetails = new PaginationAndDetails(page, pageSize, relationships.size(),
+                snippetDetails);
+        return Response.withData(paginationAndDetails);
     }
 
     public Response<PaginatedUsers> getSnippetUsers(String token, String prefix, Integer page, Integer PageSize) {

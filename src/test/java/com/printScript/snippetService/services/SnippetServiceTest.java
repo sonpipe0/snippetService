@@ -463,14 +463,14 @@ public class SnippetServiceTest {
         when(bucketHandler.get(anyString(), anyString())).thenReturn(Response.withData("print('Hello World!')"));
 
         // Call the getAccessibleSnippets method
-        Response<List<SnippetCodeDetails>> response = snippetService.getAccessibleSnippets(mockToken, "relation", 0, 10,
+        Response<PaginationAndDetails> response = snippetService.getAccessibleSnippets(mockToken, "relation", 0, 10,
                 "Title");
 
         // Verify the response
         assertNotNull(response.getData());
-        assertEquals(2, response.getData().size());
+        assertEquals(2, response.getData().getSnippetCodeDetails().size());
 
-        SnippetCodeDetails snippetDetails1 = response.getData().getFirst();
+        SnippetCodeDetails snippetDetails1 = response.getData().getSnippetCodeDetails().getFirst();
         assertEquals("Title", snippetDetails1.getTitle());
         assertEquals("print('Hello World!')", snippetDetails1.getCode());
         assertEquals("Description", snippetDetails1.getDescription());
@@ -479,7 +479,7 @@ public class SnippetServiceTest {
         assertEquals(Snippet.Status.IN_PROGRESS, snippetDetails1.getLintStatus());
         assertEquals("mockUsername", snippetDetails1.getAuthor());
 
-        SnippetCodeDetails snippetDetails2 = response.getData().get(1);
+        SnippetCodeDetails snippetDetails2 = response.getData().getSnippetCodeDetails().get(1);
         assertEquals("Title", snippetDetails2.getTitle());
         assertEquals("print('Hello World!')", snippetDetails2.getCode());
         assertEquals("Description", snippetDetails2.getDescription());

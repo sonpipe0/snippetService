@@ -125,4 +125,21 @@ public class PermissionsManagerHandler {
             return Response.withError(new Error<>(e.getStatusCode().value(), e.getResponseBodyAsString()));
         }
     }
+
+    public Response<List<String>> getAllSnippets(String token) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("Authorization", token);
+        HttpEntity<Void> request = new HttpEntity<>(headers);
+        try {
+            String response = getRequest(permissionsWebClient, "/snippets/get/all/edit", request, String.class,
+                    Map.of());
+            List<String> snippetIds = objectMapper.readValue(response, new TypeReference<>() {
+            });
+            return Response.withData(snippetIds);
+        } catch (HttpClientErrorException e) {
+            return Response.withError(new Error<>(e.getStatusCode().value(), e.getResponseBodyAsString()));
+        } catch (JsonProcessingException e) {
+            return Response.withError(new Error<>(400, "Failed to get snippets"));
+        }
+    }
 }

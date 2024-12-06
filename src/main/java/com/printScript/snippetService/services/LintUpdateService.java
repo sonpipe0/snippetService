@@ -13,7 +13,7 @@ import com.printScript.snippetService.DTO.Response;
 import com.printScript.snippetService.entities.Snippet;
 import com.printScript.snippetService.redis.ProducerInterface;
 import com.printScript.snippetService.repositories.SnippetRepository;
-import com.printScript.snippetService.web.ConfigServiceWebHandler;
+import com.printScript.snippetService.web.handlers.PermissionsManagerHandler;
 
 import events.ConfigPublishEvent;
 
@@ -25,10 +25,8 @@ public class LintUpdateService {
     private static final Logger logger = Logger.getLogger(LintUpdateService.class.getName());
 
     @Autowired
-    private SnippetService snippetService;
+    private PermissionsManagerHandler permissionsManagerHandler;
 
-    @Autowired
-    private ConfigServiceWebHandler configServiceWebHandler;
     @Autowired
     private SnippetRepository snippetRepository;
 
@@ -40,7 +38,7 @@ public class LintUpdateService {
 
     public void sendLintMessages(String userId, String token) {
         logger.info("sendLintMessages was called");
-        List<String> snippets = this.getAllSnippets(userId, token);
+        List<String> snippets = this.getAllSnippets(token);
         AtomicInteger count = new AtomicInteger();
         for (String snippet : snippets) {
             snippetRepository.findById(snippet).ifPresent(snippetEntity -> {
@@ -67,9 +65,9 @@ public class LintUpdateService {
         }
     }
 
-    public List<String> getAllSnippets(String userId, String token) {
+    public List<String> getAllSnippets(String token) {
         logger.info("getAllSnippets was called");
-        Response<List<String>> snippets = configServiceWebHandler.getAllSnippets(userId, token);
+        Response<List<String>> snippets = permissionsManagerHandler.getAllSnippets(token);
         if (snippets.isError()) {
             return new ArrayList<>();
         } else {

@@ -190,11 +190,12 @@ public class TestSnippetController {
                 "language", "version", "code", Snippet.Status.IN_PROGRESS);
         List<SnippetCodeDetails> snippetCodeDetailsList = List.of(snippetCodeDetails);
 
-        when(snippetService.getAccessibleSnippets(token, null, 1, 1, null))
-                .thenReturn(Response.withData(snippetCodeDetailsList));
+        PaginationAndDetails paginationAndDetails = new PaginationAndDetails(1, 1, 1, snippetCodeDetailsList);
 
-        assertEquals(snippetCodeDetailsList,
-                snippetController.getAccessibleSnippets(token, null, 1, 1, null).getBody());
+        when(snippetService.getAccessibleSnippets(token, null, 1, 1, null))
+                .thenReturn(Response.withData(paginationAndDetails));
+
+        assertEquals(paginationAndDetails, snippetController.getAccessibleSnippets(token, null, 1, 1, null).getBody());
 
         when(snippetService.getAccessibleSnippets(token, null, 1, 1, null))
                 .thenReturn(Response.withError(new Error<>(400, "error")));

@@ -139,8 +139,8 @@ public class SnippetController {
     public ResponseEntity<Object> getAccessibleSnippets(@RequestHeader("Authorization") String token,
             @RequestParam(required = false) String relation, @RequestParam Integer page,
             @RequestParam Integer page_size, @RequestParam String prefix) {
-        Response<List<SnippetCodeDetails>> response = snippetService.getAccessibleSnippets(token, relation, page,
-                page_size, prefix);
+        Response<PaginationAndDetails> response = snippetService.getAccessibleSnippets(token, relation, page, page_size,
+                prefix);
         if (response.isError()) {
             return new ResponseEntity<>(response.getError().body(), HttpStatusCode.valueOf(response.getError().code()));
         }
