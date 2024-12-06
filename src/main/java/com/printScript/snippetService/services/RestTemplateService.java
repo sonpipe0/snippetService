@@ -8,7 +8,7 @@ import org.springframework.web.client.RestTemplate;
 
 @Service
 public class RestTemplateService {
-    private final Logger log = LoggerFactory.getLogger(ConfigService.class);
+    private final Logger log = LoggerFactory.getLogger(RestTemplateService.class);
 
     private RestTemplate restTemplate;
 

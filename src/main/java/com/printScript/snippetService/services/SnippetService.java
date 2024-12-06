@@ -51,7 +51,7 @@ public class SnippetService {
 
     private final Validator validation = Validation.buildDefaultValidatorFactory().getValidator();
 
-    private final Logger log = LoggerFactory.getLogger(ConfigService.class);
+    private final Logger log = LoggerFactory.getLogger(SnippetService.class);
 
     @Autowired
     public SnippetService(ProducerInterface lintProducer, ProducerInterface formatProducer) {
