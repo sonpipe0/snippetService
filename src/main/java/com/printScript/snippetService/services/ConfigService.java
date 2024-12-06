@@ -5,6 +5,8 @@ import static com.printScript.snippetService.utils.Utils.getViolationsMessageErr
 import java.io.IOException;
 import java.util.Set;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -37,6 +39,9 @@ public class ConfigService {
     private FormatUpdateService formatUpdateService;
 
     private final Validator validation = Validation.buildDefaultValidatorFactory().getValidator();
+
+    private final Logger log = LoggerFactory.getLogger(ConfigService.class);
+
     @Autowired
     private LintingConfigRepository lintingConfigRepository;
 
@@ -45,6 +50,7 @@ public class ConfigService {
 
     public Response<Void> putLintingConfig(LintingConfigDTO lintingConfigDTO, String userId, String token)
             throws IOException {
+        log.info("putLintingConfig was called");
         Set<ConstraintViolation<LintingConfigDTO>> violations = validation.validate(lintingConfigDTO);
         if (!violations.isEmpty()) {
             return Response.withError(getViolationsMessageError(violations));
@@ -64,6 +70,7 @@ public class ConfigService {
     }
 
     public Response<LintingConfigDTO> getLintingConfig(String userId, String token) {
+        log.info("getLintingConfig was called");
         try {
             Response<String> response = bucketHandler.get("lint/" + userId, token);
             if (response.getError() != null) {
@@ -77,6 +84,7 @@ public class ConfigService {
     }
 
     public Response<Void> generateDefaultLintingConfig(String userId, String token) {
+        log.info("generateDefaultLintingConfig was called");
         try {
             LintingConfigDTO lintingConfigDTO = new LintingConfigDTO();
             lintingConfigDTO.setIdentifierFormat(LintingConfigDTO.IdentifierFormat.CAMEL_CASE);
@@ -99,6 +107,7 @@ public class ConfigService {
 
     public Response<Void> putFormatConfig(FormatConfigDTO formatConfigDTO, String userId, String token)
             throws IOException {
+        log.info("putFormatConfig was called");
         Set<ConstraintViolation<FormatConfigDTO>> violations = validation.validate(formatConfigDTO);
         if (!violations.isEmpty()) {
             return Response.withError(getViolationsMessageError(violations));
@@ -118,6 +127,7 @@ public class ConfigService {
     }
 
     public Response<FormatConfigDTO> getFormatConfig(String userId, String token) {
+        log.info("getFormatConfig was called");
         try {
             Response<String> response = bucketHandler.get("format/" + userId, token);
             if (response.getError() != null) {
@@ -131,6 +141,7 @@ public class ConfigService {
     }
 
     public Response<Void> generateDefaultFormatConfig(String userId, String token) {
+        log.info("generateDefaultFormatConfig was called");
         try {
             FormatConfigDTO formatConfigDTO = new FormatConfigDTO();
             formatConfigDTO.setIndentInsideBraces(4);

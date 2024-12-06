@@ -11,34 +11,34 @@ import org.springframework.stereotype.Service;
 
 import com.printScript.snippetService.DTO.Response;
 import com.printScript.snippetService.entities.Snippet;
-import com.printScript.snippetService.redis.LintProducerInterface;
+import com.printScript.snippetService.redis.ProducerInterface;
 import com.printScript.snippetService.repositories.SnippetRepository;
-import com.printScript.snippetService.web.ConfigServiceWebHandler;
+import com.printScript.snippetService.web.handlers.PermissionsManagerHandler;
 
 import events.ConfigPublishEvent;
 
 @Service
 public class FormatUpdateService {
 
-    private final LintProducerInterface lintProducer;
+    private final ProducerInterface lintProducer;
 
     private static final Logger logger = Logger.getLogger(FormatUpdateService.class.getName());
 
     @Autowired
-    private SnippetService snippetService;
+    private PermissionsManagerHandler permissionsManagerHandler;
 
-    @Autowired
-    private ConfigServiceWebHandler configServiceWebHandler;
     @Autowired
     private SnippetRepository snippetRepository;
 
     @Autowired
-    public FormatUpdateService(LintProducerInterface lintProducer) {
+    public FormatUpdateService(ProducerInterface lintProducer) {
+        logger.info("FormatUpdateService was created");
         this.lintProducer = lintProducer;
     }
 
     public void sendFormatMessages(String userId, String token) {
-        List<String> snippets = this.getAllSnippets(userId, token);
+        logger.info("sendFormatMessages was called");
+        List<String> snippets = this.getAllSnippets(token);
         AtomicInteger count = new AtomicInteger();
         for (String snippet : snippets) {
             snippetRepository.findById(snippet).ifPresent(snippetEntity -> {
@@ -65,8 +65,9 @@ public class FormatUpdateService {
         }
     }
 
-    public List<String> getAllSnippets(String userId, String token) {
-        Response<List<String>> snippets = configServiceWebHandler.getAllSnippets(userId, token);
+    public List<String> getAllSnippets(String token) {
+        logger.info("getAllSnippets was called");
+        Response<List<String>> snippets = permissionsManagerHandler.getAllSnippets(token);
         if (snippets.isError()) {
             return new ArrayList<>();
         } else {

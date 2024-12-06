@@ -28,8 +28,8 @@ import com.printScript.snippetService.redis.StatusConsumer;
 import com.printScript.snippetService.repositories.FormatConfigRepository;
 import com.printScript.snippetService.repositories.LintingConfigRepository;
 import com.printScript.snippetService.repositories.SnippetRepository;
-import com.printScript.snippetService.web.ConfigServiceWebHandler;
 import com.printScript.snippetService.web.handlers.BucketHandler;
+import com.printScript.snippetService.web.handlers.PermissionsManagerHandler;
 
 import DTO.FormatConfigDTO;
 import DTO.LintingConfigDTO;
@@ -46,6 +46,9 @@ public class ConfigServiceTest {
 
     @MockBean
     private BucketHandler bucketHandler;
+
+    @MockBean
+    private PermissionsManagerHandler permissionsManagerHandler;
 
     @Autowired
     private LintUpdateService lintUpdateService;
@@ -71,11 +74,7 @@ public class ConfigServiceTest {
     @MockBean
     private StatusConsumer statusConsumer;
 
-    @MockBean
-    private ConfigServiceWebHandler configServiceWebHandler;
-
     private String token;
-
     private String snippetId;
     private String snippetId2;
     private String snippetId3;
@@ -111,7 +110,7 @@ public class ConfigServiceTest {
         snippet3.setDescription("mockSnippetDescription3");
         snippetRepository.save(snippet3);
 
-        when(configServiceWebHandler.getAllSnippets(anyString(), anyString()))
+        when(permissionsManagerHandler.getAllSnippets(anyString()))
                 .thenReturn(Response.withData(List.of(snippet.getId(), snippet2.getId(), snippet3.getId())));
 
         snippetId = snippet.getId();

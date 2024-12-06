@@ -102,7 +102,7 @@ public class PermissionsManagerHandler {
         header.set("Authorization", token);
         HttpEntity<Void> requestPermissions = new HttpEntity<>(header);
         try {
-            String response = getRequest(permissionsWebClient, "user/paginated", requestPermissions, String.class,
+            String response = getRequest(permissionsWebClient, "snippets/paginated", requestPermissions, String.class,
                     Map.of("page", page.toString(), "pageSize", pageSize.toString(), "prefix", prefix));
             PaginatedUsers paginatedUsers = objectMapper.readValue(response, PaginatedUsers.class);
             return Response.withData(paginatedUsers);
@@ -123,6 +123,23 @@ public class PermissionsManagerHandler {
             return Response.withData(response);
         } catch (HttpClientErrorException e) {
             return Response.withError(new Error<>(e.getStatusCode().value(), e.getResponseBodyAsString()));
+        }
+    }
+
+    public Response<List<String>> getAllSnippets(String token) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("Authorization", token);
+        HttpEntity<Void> request = new HttpEntity<>(headers);
+        try {
+            String response = getRequest(permissionsWebClient, "/snippets/get/all/edit", request, String.class,
+                    Map.of());
+            List<String> snippetIds = objectMapper.readValue(response, new TypeReference<>() {
+            });
+            return Response.withData(snippetIds);
+        } catch (HttpClientErrorException e) {
+            return Response.withError(new Error<>(e.getStatusCode().value(), e.getResponseBodyAsString()));
+        } catch (JsonProcessingException e) {
+            return Response.withError(new Error<>(400, "Failed to get snippets"));
         }
     }
 }

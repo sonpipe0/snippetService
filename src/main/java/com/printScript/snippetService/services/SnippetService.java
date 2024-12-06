@@ -6,6 +6,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -15,7 +17,7 @@ import org.springframework.transaction.interceptor.TransactionAspectSupport;
 import com.printScript.snippetService.DTO.*;
 import com.printScript.snippetService.entities.Snippet;
 import com.printScript.snippetService.errorDTO.Error;
-import com.printScript.snippetService.redis.LintProducerInterface;
+import com.printScript.snippetService.redis.ProducerInterface;
 import com.printScript.snippetService.repositories.SnippetRepository;
 import com.printScript.snippetService.utils.TokenUtils;
 import com.printScript.snippetService.web.handlers.BucketHandler;
@@ -43,17 +45,23 @@ public class SnippetService {
     @Autowired
     private PrintScriptServiceHandler printScriptServiceHandler;
 
-    private final LintProducerInterface lintProducer;
+    private final ProducerInterface lintProducer;
+
+    private final ProducerInterface formatProducer;
 
     private final Validator validation = Validation.buildDefaultValidatorFactory().getValidator();
 
+    private final Logger log = LoggerFactory.getLogger(SnippetService.class);
+
     @Autowired
-    public SnippetService(LintProducerInterface lintProducer) {
+    public SnippetService(ProducerInterface lintProducer, ProducerInterface formatProducer) {
         this.lintProducer = lintProducer;
+        this.formatProducer = formatProducer;
     }
 
     @Transactional
     public Response<SnippetCodeDetails> saveSnippet(SnippetDTO snippetDTO, String token) {
+        log.info("saveSnippet was called");
         Set<ConstraintViolation<SnippetDTO>> violations = validation.validate(snippetDTO);
         if (!violations.isEmpty()) {
             return Response.withError(getViolationsMessageError(violations));
@@ -108,6 +116,7 @@ public class SnippetService {
     }
 
     public Response<SnippetCodeDetails> updateSnippet(UpdateSnippetDTO updateSnippetDTO, String token) {
+        log.info("updateSnippet was called");
         Set<ConstraintViolation<UpdateSnippetDTO>> violations = validation.validate(updateSnippetDTO);
         if (!violations.isEmpty()) {
             return Response.withError(getViolationsMessageError(violations));
@@ -170,6 +179,7 @@ public class SnippetService {
     }
 
     public Response<SnippetCodeDetails> getSnippetDetails(String snippetId, String token) {
+        log.info("getSnippetDetails was called");
         Optional<Snippet> snippetOpt = snippetRepository.findById(snippetId);
         if (snippetOpt.isEmpty()) {
             return Response.withError(new Error<>(404, "Snippet not found"));
@@ -210,6 +220,7 @@ public class SnippetService {
     }
 
     public Response<String> deleteSnippet(String snippetId, String token) {
+        log.info("deleteSnippet was called");
         Response<String> canEditResponse = permissionsManagerHandler.checkPermissions(snippetId, token,
                 "/snippets/can-edit");
         if (canEditResponse.isError()) {
@@ -242,6 +253,7 @@ public class SnippetService {
     }
 
     public Response<SnippetCodeDetails> shareSnippet(ShareSnippetDTO shareSnippetDTO, String token) {
+        log.info("shareSnippet was called");
         Set<ConstraintViolation<ShareSnippetDTO>> violations = validation.validate(shareSnippetDTO);
         if (!violations.isEmpty()) {
             return Response.withError(getViolationsMessageError(violations));
@@ -281,6 +293,7 @@ public class SnippetService {
     }
 
     public Response<Tuple> downloadSnippet(String snippetId, String token) {
+        log.info("downloadSnippet was called");
         Response<String> permissionsResponse = permissionsManagerHandler.checkPermissions(snippetId, token,
                 "/snippets/has-access");
         if (permissionsResponse.isError())
@@ -303,6 +316,7 @@ public class SnippetService {
     }
 
     public Response<String> getFormattedFile(String snippetId, String token) {
+        log.info("getFormattedFile was called");
         Response<String> permissionsResponse = permissionsManagerHandler.checkPermissions(snippetId, token,
                 "/snippets/has-access");
         if (permissionsResponse.isError())
@@ -331,6 +345,7 @@ public class SnippetService {
     }
 
     private void generateEvents(String token, String snippetId, Snippet snippet, String language) {
+        log.info("generateEvents was called");
         if (!language.equals("printscript")) {
             snippet.setFormatStatus(Snippet.Status.UNKNOWN);
             snippet.setLintStatus(Snippet.Status.UNKNOWN);
@@ -353,11 +368,12 @@ public class SnippetService {
         formatPublishEvent.setUserId(userId);
         formatPublishEvent.setType(ConfigPublishEvent.ConfigType.FORMAT);
 
-        lintProducer.publishEvent(formatPublishEvent);
+        formatProducer.publishEvent(formatPublishEvent);
     }
 
-    public Response<List<SnippetCodeDetails>> getAccessibleSnippets(String token, String relation, Integer page,
+    public Response<PaginationAndDetails> getAccessibleSnippets(String token, String relation, Integer page,
             Integer pageSize, String name) {
+        log.info("getAccessibleSnippets was called");
         Response<List<SnippetPermissionGrantResponse>> relationshipsResponse = permissionsManagerHandler
                 .getSnippetRelationships(token, relation);
         if (relationshipsResponse.isError()) {
@@ -388,10 +404,13 @@ public class SnippetService {
 
             return snippetDetail;
         }).toList();
-        return Response.withData(snippetDetails);
+        PaginationAndDetails paginationAndDetails = new PaginationAndDetails(page, pageSize, relationships.size(),
+                snippetDetails);
+        return Response.withData(paginationAndDetails);
     }
 
     public Response<PaginatedUsers> getSnippetUsers(String token, String prefix, Integer page, Integer PageSize) {
+        log.info("getSnippetUsers was called");
         Response<PaginatedUsers> response = permissionsManagerHandler.getSnippetUsers(token, prefix, page, PageSize);
         if (response.isError()) {
             return Response.withError(response.getError());

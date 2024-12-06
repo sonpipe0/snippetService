@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.printScript.snippetService.DTO.*;
-import com.printScript.snippetService.redis.LintProducerInterface;
+import com.printScript.snippetService.redis.ProducerInterface;
 import com.printScript.snippetService.services.SnippetService;
 import com.printScript.snippetService.utils.TokenUtils;
 
@@ -23,7 +23,7 @@ public class SnippetController {
     private final SnippetService snippetService;
 
     @Autowired
-    public SnippetController(SnippetService snippetService, LintProducerInterface lintProducer) {
+    public SnippetController(SnippetService snippetService, ProducerInterface lintProducer) {
         this.snippetService = snippetService;
     }
 
@@ -139,8 +139,8 @@ public class SnippetController {
     public ResponseEntity<Object> getAccessibleSnippets(@RequestHeader("Authorization") String token,
             @RequestParam(required = false) String relation, @RequestParam Integer page,
             @RequestParam Integer page_size, @RequestParam String prefix) {
-        Response<List<SnippetCodeDetails>> response = snippetService.getAccessibleSnippets(token, relation, page,
-                page_size, prefix);
+        Response<PaginationAndDetails> response = snippetService.getAccessibleSnippets(token, relation, page, page_size,
+                prefix);
         if (response.isError()) {
             return new ResponseEntity<>(response.getError().body(), HttpStatusCode.valueOf(response.getError().code()));
         }

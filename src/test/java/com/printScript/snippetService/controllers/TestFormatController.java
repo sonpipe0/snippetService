@@ -20,6 +20,7 @@ import org.springframework.test.context.ActiveProfiles;
 import com.printScript.snippetService.DTO.Response;
 import com.printScript.snippetService.TestSecurityConfig;
 import com.printScript.snippetService.errorDTO.Error;
+import com.printScript.snippetService.redis.FormatProducer;
 import com.printScript.snippetService.redis.LintProducer;
 import com.printScript.snippetService.redis.StatusConsumer;
 import com.printScript.snippetService.services.ConfigService;
@@ -38,6 +39,9 @@ public class TestFormatController {
 
     @MockBean
     private StatusConsumer statusConsumer;
+
+    @MockBean
+    private FormatProducer formatProducer;
 
     String token;
 
